@@ -1,0 +1,16 @@
+services:
+  customerdb:
+    image: postgres:alpine
+    container_name: customerdb
+    environment:
+      POSTGRES_USER: "admin"
+      POSTGRES_PASSWORD: "Marethyu2004!"
+      POSTGRES_DB: CustomerDb
+    restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5440:5432"
+
+volumes:
+  postgres_data:
