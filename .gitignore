@@ -36,8 +36,6 @@ yarn-error.log*
 next-env.d.ts
 
 drizzle
-seed.ts
-
 # lock
 pnpm-lock.yaml
 package-lock.json
