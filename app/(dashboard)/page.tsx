@@ -8,13 +8,6 @@ export default function DashboardPage() {
     <div className="max-w-screen-2xl mx-auto w-full pb-10 -mt-24 space-y-6">
       <DataGrid />
       <DataCharts />
-
-      {process.env.NODE_ENV === "development" && (
-        <>
-          <DebugUser />
-          <DebugData />
-        </>
-      )}
     </div>
   );
 }

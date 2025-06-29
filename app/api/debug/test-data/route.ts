@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 
 export async function GET() {
   try {
-    const { userId } = await auth();
+    const { userId } = auth();
 
     console.log("🔍 Debug API - User ID from auth:", userId);
 

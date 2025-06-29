@@ -1,14 +1,14 @@
 import { Hono } from "hono";
 import { eq } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
-import { clerkMiddleware, getAuth } from "@hono/clerk-auth";
+import { getAuth } from "@hono/clerk-auth";
 import { addYears } from "date-fns";
 
 import { db } from "@/db/drizzle";
 import { subscriptions } from "@/db/schema";
 
 const app = new Hono()
-  .get("/current", clerkMiddleware(), async (c) => {
+  .get("/current", async (c) => {
     const auth = getAuth(c);
     if (!auth?.userId) {
       return c.json({ error: "Unauthorized" }, 401);
@@ -36,7 +36,7 @@ const app = new Hono()
 
     return c.json({ data: subscription });
   })
-  .post("/checkout", clerkMiddleware(), async (c) => {
+  .post("/checkout", async (c) => {
     const auth = getAuth(c);
 
     if (!auth?.userId) {
@@ -68,7 +68,7 @@ const app = new Hono()
       },
     });
   })
-  .post("/upgrade", clerkMiddleware(), async (c) => {
+  .post("/upgrade", async (c) => {
     const auth = getAuth(c);
 
     if (!auth?.userId) {
@@ -110,7 +110,7 @@ const app = new Hono()
       return c.json({ data: newSubscription });
     }
   })
-  .post("/cancel", clerkMiddleware(), async (c) => {
+  .post("/cancel", async (c) => {
     const auth = getAuth(c);
 
     if (!auth?.userId) {

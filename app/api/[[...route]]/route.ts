@@ -1,6 +1,7 @@
-// app/api/[[...route]]/route.ts
 import { Hono } from "hono";
 import { handle } from "hono/vercel";
+
+import { clerk } from "./clerk-config";
 
 import summary from "./summary";
 import accounts from "./accounts";
@@ -11,6 +12,9 @@ import subscriptions from "./subscriptions";
 export const runtime = "nodejs";
 
 const app = new Hono().basePath("/api");
+
+// Apply clerk middleware globally
+app.use("*", clerk);
 
 const routes = app
   .route("/summary", summary)
