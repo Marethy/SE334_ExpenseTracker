@@ -99,7 +99,7 @@ export const MockBanking = () => {
               </div>
               <div className="flex items-center gap-2">
                 <p className="font-semibold">
-                  ₹{bank.balance.toLocaleString()}
+                  {bank.balance.toLocaleString()}VND
                 </p>
                 <Button
                   onClick={() => removeMockBank(bank.id)}

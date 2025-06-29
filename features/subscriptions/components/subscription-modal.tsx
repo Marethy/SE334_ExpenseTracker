@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { formatCurrency } from "@/lib/utils";
 
 export const SubscriptionModal = () => {
   const checkout = useCheckoutSubscription();
@@ -45,7 +46,7 @@ export const SubscriptionModal = () => {
 
         <div className="space-y-4">
           <div className="text-center">
-            <div className="text-3xl font-bold">₹999</div>
+            <div className="text-3xl font-bold">{`${formatCurrency(1000000)}VND`}</div>
             <div className="text-sm text-muted-foreground">per year</div>
           </div>
 

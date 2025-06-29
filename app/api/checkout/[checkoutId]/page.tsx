@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import { formatCurrency } from "@/lib/utils";
 
 export default function CheckoutPage() {
   const params = useParams();
@@ -98,7 +99,7 @@ export default function CheckoutPage() {
 
         <CardContent className="space-y-6">
           <div className="text-center">
-            <div className="text-3xl font-bold">₹999</div>
+            <div className="text-3xl font-bold">{`${formatCurrency(1000000)} VND`}</div>
             <div className="text-sm text-muted-foreground">
               Annual Premium Subscription
             </div>
