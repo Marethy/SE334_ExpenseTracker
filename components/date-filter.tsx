@@ -1,30 +1,36 @@
-'use client';
+// components/date-filter.tsx
+"use client";
 
-import qs from 'query-string';
-import { useState } from 'react';
-import { format, subDays } from 'date-fns';
-import { ChevronDown } from 'lucide-react';
-import { DateRange } from 'react-day-picker';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import qs from "query-string";
+import { useState, useEffect } from "react";
+import { format, subDays } from "date-fns";
+import { ChevronDown } from "lucide-react";
+import { DateRange } from "react-day-picker";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-import { formatDateRange } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
+import { formatDateRange } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
   PopoverClose,
-} from '@/components/ui/popover';
+} from "@/components/ui/popover";
 
 export const DateFilter = () => {
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
   const pathName = usePathname();
-
   const params = useSearchParams();
-  const accountId = params.get('accountId');
-  const from = params.get('from') || '';
-  const to = params.get('to') || '';
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const accountId = params.get("accountId");
+  const from = params.get("from") || "";
+  const to = params.get("to") || "";
 
   const defaultTo = new Date();
   const defaultFrom = subDays(defaultTo, 30);
@@ -37,9 +43,11 @@ export const DateFilter = () => {
   const [date, setDate] = useState<DateRange | undefined>(paramState);
 
   const pushToUrl = (dateRange: DateRange | undefined) => {
+    if (!mounted) return;
+
     const query = {
-      from: format(dateRange?.from || defaultFrom, 'yyyy-MM-dd'),
-      to: format(dateRange?.to || defaultTo, 'yyyy-MM-dd'),
+      from: format(dateRange?.from || defaultFrom, "yyyy-MM-dd"),
+      to: format(dateRange?.to || defaultTo, "yyyy-MM-dd"),
       accountId,
     };
 
@@ -58,6 +66,21 @@ export const DateFilter = () => {
     setDate(undefined);
     pushToUrl(undefined);
   };
+
+  // Prevent hydration mismatch
+  if (!mounted) {
+    return (
+      <Button
+        disabled={true}
+        size="sm"
+        variant="outline"
+        className="lg:w-auto w-full h-9 rounded-md px-3 font-normal bg-white/10 hover:bg-white/20 hover:text-white border-none focus:ring-offset-0 focus:ring-transparent outline-none text-white focus:bg-white/30 trasnsition"
+      >
+        <span>{formatDateRange(paramState)}</span>
+        <ChevronDown className="mr-2 size-4 opacity-50" />
+      </Button>
+    );
+  }
 
   return (
     <Popover>

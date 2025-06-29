@@ -1,9 +1,16 @@
-import { NextResponse } from 'next/server';
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { NextResponse } from "next/server";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-const isProtectedRoute = createRouteMatcher(['/']);
+const isProtectedRoute = createRouteMatcher(["/"]);
+const isWellKnownRoute = createRouteMatcher(["/.well-known/:path*"]);
 
 export default clerkMiddleware(async (auth, request) => {
+  // Handle well-known routes
+  if (isWellKnownRoute(request)) {
+    return NextResponse.next();
+  }
+
+  // Handle protected routes
   if (isProtectedRoute(request)) {
     await auth().protect();
   }
@@ -12,5 +19,10 @@ export default clerkMiddleware(async (auth, request) => {
 });
 
 export const config = {
-  matcher: ['/((?!.+.[w]+$|_next).*)', '/', '/(api|trpc)(.*)'],
+  matcher: [
+    "/((?!.+.[w]+$|_next).*)",
+    "/",
+    "/(api|trpc)(.*)",
+    "/.well-known/(.*)", // Add well-known routes
+  ],
 };
