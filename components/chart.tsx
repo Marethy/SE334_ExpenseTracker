@@ -1,25 +1,26 @@
-// components/chart.tsx
-import { useState } from 'react';
+import { useState } from "react";
 import {
   AreaChart,
   BarChart3,
   FileSearch,
   LineChart,
   Loader2,
-} from 'lucide-react';
+} from "lucide-react";
 
-import { Skeleton } from '@/components/ui/skeleton';
-import { BarVariant } from '@/components/bar-variant';
-import { AreaVariant } from '@/components/area-variant';
-import { LineVariant } from '@/components/line-variant';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { usePaywall } from "@/features/subscriptions/hooks/use-paywall";
+
+import { Skeleton } from "@/components/ui/skeleton";
+import { BarVariant } from "@/components/bar-variant";
+import { AreaVariant } from "@/components/area-variant";
+import { LineVariant } from "@/components/line-variant";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 
 type Props = {
   data?: {
@@ -30,9 +31,14 @@ type Props = {
 };
 
 export const Chart = ({ data = [] }: Props) => {
-  const [chartType, setChartType] = useState('area');
+  const [chartType, setChartType] = useState("area");
+  const { shouldBlock, triggerPaywall } = usePaywall();
 
   const onTypeChange = (type: string) => {
+    if (type !== "area" && shouldBlock) {
+      triggerPaywall();
+      return;
+    }
     setChartType(type);
   };
 
@@ -55,13 +61,13 @@ export const Chart = ({ data = [] }: Props) => {
             <SelectItem value="line">
               <div className="flex items-center">
                 <LineChart className="size-4 mr-2 shrink-0" />
-                <p className="line-clamp-1">Line Chart</p>
+                <p className="line-clamp-1">Line Chart {shouldBlock && "🔒"}</p>
               </div>
             </SelectItem>
             <SelectItem value="bar">
               <div className="flex items-center">
                 <BarChart3 className="size-4 mr-2 shrink-0" />
-                <p className="line-clamp-1">Bar Chart</p>
+                <p className="line-clamp-1">Bar Chart {shouldBlock && "🔒"}</p>
               </div>
             </SelectItem>
           </SelectContent>
@@ -78,9 +84,9 @@ export const Chart = ({ data = [] }: Props) => {
           </div>
         ) : (
           <>
-            {chartType === 'area' && <AreaVariant data={data} />}
-            {chartType === 'line' && <LineVariant data={data} />}
-            {chartType === 'bar' && <BarVariant data={data} />}
+            {chartType === "area" && <AreaVariant data={data} />}
+            {chartType === "line" && <LineVariant data={data} />}
+            {chartType === "bar" && <BarVariant data={data} />}
           </>
         )}
       </CardContent>

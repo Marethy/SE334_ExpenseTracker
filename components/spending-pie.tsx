@@ -1,20 +1,18 @@
-import { useState } from 'react';
-import { FileSearch, Loader2, PieChart, Radar, Target } from 'lucide-react';
+import { useState } from "react";
+import { FileSearch, Loader2, PieChart, Radar, Target } from "lucide-react";
 
-import { usePaywall } from '@/features/subscriptions/hooks/use-paywall';
-
-import { Skeleton } from '@/components/ui/skeleton';
-import { PieVariant } from '@/components/pie-variant';
-import { RadarVariant } from '@/components/radar-variant';
-import { RadialVariant } from '@/components/radial-variant';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from "@/components/ui/skeleton";
+import { PieVariant } from "@/components/pie-variant";
+import { RadarVariant } from "@/components/radar-variant";
+import { RadialVariant } from "@/components/radial-variant";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 
 type Props = {
   data?: {
@@ -24,14 +22,9 @@ type Props = {
 };
 
 export const SpendingPie = ({ data = [] }: Props) => {
-  const [chartType, setChartType] = useState('pie');
-  const { shouldBlock, triggerPaywall } = usePaywall();
+  const [chartType, setChartType] = useState("pie");
 
   const onTypeChange = (type: string) => {
-    if (type !== 'pie' && shouldBlock) {
-      triggerPaywall();
-      return;
-    }
     setChartType(type);
   };
 
@@ -77,9 +70,9 @@ export const SpendingPie = ({ data = [] }: Props) => {
           </div>
         ) : (
           <>
-            {chartType === 'pie' && <PieVariant data={data} />}
-            {chartType === 'radar' && <RadarVariant data={data} />}
-            {chartType === 'radial' && <RadialVariant data={data} />}
+            {chartType === "pie" && <PieVariant data={data} />}
+            {chartType === "radar" && <RadarVariant data={data} />}
+            {chartType === "radial" && <RadialVariant data={data} />}
           </>
         )}
       </CardContent>
