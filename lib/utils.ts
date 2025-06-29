@@ -2,26 +2,24 @@ import { twMerge } from "tailwind-merge";
 import { type ClassValue, clsx } from "clsx";
 import { eachDayOfInterval, format, isSameDay, subDays } from "date-fns";
 
-// Need this whenever we want to dynamically add tailwind classes
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function convertAmountFromMilliUnits(amount: number) {
-  return amount / 1000;
-}
+export function formatCurrency(value: number | string) {
+  const numValue = typeof value === "string" ? parseFloat(value) : value;
 
-export function convertAmountToMilliUnits(amount: number) {
-  return Math.round(amount * 1000);
-}
-
-export function formatCurrency(value: number) {
-  // Use consistent locale to prevent hydration mismatch
-  return Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat("vi-VN", {
     style: "currency",
-    currency: "INR",
-    minimumFractionDigits: 2,
-  }).format(value);
+    currency: "VND",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(numValue);
+}
+
+export function formatCurrencySimple(value: number | string) {
+  const numValue = typeof value === "string" ? parseFloat(value) : value;
+  return new Intl.NumberFormat("vi-VN").format(numValue) + " ₫";
 }
 
 export function calculatePercentageChange(current: number, previous: number) {
@@ -90,8 +88,7 @@ export function formatPercentage(
   value: number,
   options: { addPrefix?: boolean } = { addPrefix: false }
 ) {
-  // Use consistent formatting to prevent hydration mismatch
-  const result = new Intl.NumberFormat("en-US", {
+  const result = new Intl.NumberFormat("vi-VN", {
     style: "percent",
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
@@ -102,4 +99,15 @@ export function formatPercentage(
   }
 
   return result;
+}
+
+export function parseAmount(amount: string | number): number {
+  if (typeof amount === "number") return amount;
+  const cleanAmount = amount.replace(/[₫\s,]/g, "");
+  return parseFloat(cleanAmount) || 0;
+}
+
+export function isValidVNDAmount(amount: string | number): boolean {
+  const numAmount = typeof amount === "string" ? parseFloat(amount) : amount;
+  return !isNaN(numAmount) && isFinite(numAmount) && numAmount >= 0;
 }

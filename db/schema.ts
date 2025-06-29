@@ -7,8 +7,7 @@ import {
   text,
   timestamp,
   index,
-  varchar,
-  boolean,
+  decimal,
 } from "drizzle-orm/pg-core";
 
 export const accounts = pgTable(
@@ -19,13 +18,11 @@ export const accounts = pgTable(
     userId: text("user_id").notNull(),
   },
   (table) => ({
-    // Chỉ thêm indexes, không thay đổi columns
     userIdIdx: index("accounts_user_id_idx").on(table.userId),
     nameIdx: index("accounts_name_idx").on(table.name),
   })
 );
 
-// Categories table - giữ nguyên structure cũ + thêm indexes
 export const categories = pgTable(
   "categories",
   {
@@ -39,12 +36,12 @@ export const categories = pgTable(
   })
 );
 
-// Transactions table - giữ nguyên structure cũ + thêm indexes
 export const transactions = pgTable(
   "transactions",
   {
     id: text("id").primaryKey(),
-    amount: integer("amount").notNull(),
+    // Sử dụng decimal với precision và scale cho VND
+    amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
     payee: text("payee").notNull(),
     notes: text("notes"),
     date: timestamp("date", { mode: "date" }).notNull(),
@@ -58,14 +55,11 @@ export const transactions = pgTable(
     }),
   },
   (table) => ({
-    // Critical indexes cho performance
     accountIdIdx: index("transactions_account_id_idx").on(table.accountId),
     categoryIdIdx: index("transactions_category_id_idx").on(table.categoryId),
     dateIdx: index("transactions_date_idx").on(table.date.desc()),
     amountIdx: index("transactions_amount_idx").on(table.amount),
     payeeIdx: index("transactions_payee_idx").on(table.payee),
-
-    // Composite indexes cho query patterns phổ biến
     accountDateIdx: index("transactions_account_date_idx").on(
       table.accountId,
       table.date.desc()
@@ -81,7 +75,6 @@ export const transactions = pgTable(
   })
 );
 
-// Subscriptions table - giữ nguyên structure cũ + thêm indexes
 export const subscriptions = pgTable(
   "subscriptions",
   {
@@ -121,7 +114,7 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
   }),
 }));
 
-// Zod schemas
+// Zod schemas - Cập nhật để hỗ trợ decimal cho VND
 export const insertAccountSchema = createInsertSchema(accounts, {
   name: z.string().min(1, "Account name is required"),
   userId: z.string().min(1, "User ID is required"),
@@ -133,7 +126,17 @@ export const insertCategorySchema = createInsertSchema(categories, {
 });
 
 export const insertTransactionSchema = createInsertSchema(transactions, {
-  amount: z.number().int("Amount must be an integer"),
+  // Cho phép decimal numbers cho VND, không ép kiểu integer
+  amount: z
+    .string()
+    .refine(
+      (val) => {
+        const num = parseFloat(val);
+        return !isNaN(num) && isFinite(num);
+      },
+      { message: "Amount must be a valid number" }
+    )
+    .transform((val) => parseFloat(val)),
   payee: z.string().min(1, "Payee is required"),
   notes: z.string().optional(),
   date: z.coerce.date(),

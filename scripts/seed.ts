@@ -4,7 +4,6 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { createId } from "@paralleldrive/cuid2";
 import { accounts, categories, subscriptions, transactions } from "@/db/schema";
 
-// Load environment variables
 config({ path: ".env.local" });
 
 const getDatabaseUrl = () => {
@@ -25,35 +24,36 @@ const pool = new pg.Pool({
 
 const db = drizzle(pool);
 
-// User ID thực của bạn
 const YOUR_USER_ID = "user_2z9DHMW3UKpwza1orMSp2eYZWyK";
 
-// Seed data cho accounts - tất cả sẽ thuộc về bạn
 const accountSeed = [
-  { id: createId(), name: "Main Checking", userId: YOUR_USER_ID },
-  { id: createId(), name: "Savings Account", userId: YOUR_USER_ID },
-  { id: createId(), name: "Credit Card", userId: YOUR_USER_ID },
-  { id: createId(), name: "Investment Portfolio", userId: YOUR_USER_ID },
-  { id: createId(), name: "Emergency Fund", userId: YOUR_USER_ID },
+  { id: createId(), name: "Tài khoản Vietcombank", userId: YOUR_USER_ID },
+  { id: createId(), name: "Tài khoản tiết kiệm BIDV", userId: YOUR_USER_ID },
+  { id: createId(), name: "Thẻ tín dụng Techcombank", userId: YOUR_USER_ID },
+  { id: createId(), name: "Ví MoMo", userId: YOUR_USER_ID },
+  { id: createId(), name: "Ví ZaloPay", userId: YOUR_USER_ID },
+  { id: createId(), name: "Tiền mặt", userId: YOUR_USER_ID },
 ];
 
-// Seed data cho categories - tất cả thuộc về bạn
 const categorySeed = [
-  { id: createId(), name: "Food & Dining", userId: YOUR_USER_ID },
-  { id: createId(), name: "Transportation", userId: YOUR_USER_ID },
-  { id: createId(), name: "Shopping", userId: YOUR_USER_ID },
-  { id: createId(), name: "Entertainment", userId: YOUR_USER_ID },
-  { id: createId(), name: "Bills & Utilities", userId: YOUR_USER_ID },
-  { id: createId(), name: "Healthcare", userId: YOUR_USER_ID },
-  { id: createId(), name: "Travel", userId: YOUR_USER_ID },
-  { id: createId(), name: "Education", userId: YOUR_USER_ID },
-  { id: createId(), name: "Groceries", userId: YOUR_USER_ID },
-  { id: createId(), name: "Gas & Fuel", userId: YOUR_USER_ID },
-  { id: createId(), name: "Coffee & Drinks", userId: YOUR_USER_ID },
-  { id: createId(), name: "Subscriptions", userId: YOUR_USER_ID },
-  { id: createId(), name: "Gifts & Donations", userId: YOUR_USER_ID },
-  { id: createId(), name: "Personal Care", userId: YOUR_USER_ID },
-  { id: createId(), name: "Income", userId: YOUR_USER_ID },
+  { id: createId(), name: "Ăn uống", userId: YOUR_USER_ID },
+  { id: createId(), name: "Đi lại", userId: YOUR_USER_ID },
+  { id: createId(), name: "Mua sắm", userId: YOUR_USER_ID },
+  { id: createId(), name: "Giải trí", userId: YOUR_USER_ID },
+  { id: createId(), name: "Hóa đơn & Tiện ích", userId: YOUR_USER_ID },
+  { id: createId(), name: "Y tế", userId: YOUR_USER_ID },
+  { id: createId(), name: "Du lịch", userId: YOUR_USER_ID },
+  { id: createId(), name: "Giáo dục", userId: YOUR_USER_ID },
+  { id: createId(), name: "Sinh hoạt phẩm", userId: YOUR_USER_ID },
+  { id: createId(), name: "Xăng xe", userId: YOUR_USER_ID },
+  { id: createId(), name: "Cà phê & Đồ uống", userId: YOUR_USER_ID },
+  { id: createId(), name: "Dịch vụ trực tuyến", userId: YOUR_USER_ID },
+  { id: createId(), name: "Quà tặng & Từ thiện", userId: YOUR_USER_ID },
+  { id: createId(), name: "Chăm sóc cá nhân", userId: YOUR_USER_ID },
+  { id: createId(), name: "Thu nhập", userId: YOUR_USER_ID },
+  { id: createId(), name: "Nhà ở", userId: YOUR_USER_ID },
+  { id: createId(), name: "Bảo hiểm", userId: YOUR_USER_ID },
+  { id: createId(), name: "Thể thao", userId: YOUR_USER_ID },
 ];
 
 // Subscription cho bạn
@@ -70,111 +70,244 @@ const subscriptionSeed = [
   },
 ];
 
-// Function để tạo realistic transaction data
+// Function để tạo realistic transaction data cho Việt Nam
 const createTransactionSeed = () => {
   const transactions = [];
   const now = new Date();
 
-  // Các loại income
+  // Các loại thu nhập phổ biến ở Việt Nam
   const incomePayees = [
-    "Salary Payment",
-    "Freelance Project",
-    "Investment Dividend",
-    "Side Hustle Income",
-    "Bonus Payment",
-    "Consulting Fee",
-    "Interest Payment",
+    "Lương tháng",
+    "Thưởng dự án",
+    "Freelance",
+    "Kinh doanh online",
+    "Đầu tư",
+    "Làm thêm",
+    "Lãi tiết kiệm",
+    "Bán hàng",
+    "Dạy học",
+    "Thiết kế website",
   ];
 
-  // Các loại expense với category tương ứng
+  // Các loại chi tiêu với category tương ứng (số tiền theo VND)
   const expenseData = [
     {
-      payees: ["Starbucks", "Local Coffee Shop", "Dunkin Donuts"],
-      category: "Coffee & Drinks",
-      amountRange: [50, 200],
+      payees: [
+        "Highlands Coffee",
+        "Starbucks",
+        "Cộng Cà Phê",
+        "Trà sữa TocoToco",
+        "Phúc Long",
+        "Cà phê vỉa hè",
+      ],
+      category: "Cà phê & Đồ uống",
+      amountRange: [25000, 120000], // 25k-120k VND
     },
     {
       payees: [
         "Grab Food",
-        "McDonalds",
+        "ShopeeFood",
+        "Bún chả Hương Liên",
+        "Phở Thìn",
+        "Lotteria",
         "KFC",
-        "Pizza Hut",
-        "Local Restaurant",
+        "McDonald's",
+        "Quán cơm tấm",
+        "Nhà hàng BBQ",
+        "Buffet lẩu",
       ],
-      category: "Food & Dining",
-      amountRange: [100, 800],
+      category: "Ăn uống",
+      amountRange: [50000, 800000], // 50k-800k VND
     },
     {
-      payees: ["BigC", "Vinmart", "Co.opmart", "Lotte Mart"],
-      category: "Groceries",
-      amountRange: [200, 1500],
+      payees: [
+        "Vinmart",
+        "Co.opmart",
+        "Big C",
+        "Lotte Mart",
+        "Mega Market",
+        "Circle K",
+        "FamilyMart",
+        "Chợ Bến Thành",
+      ],
+      category: "Sinh hoạt phẩm",
+      amountRange: [100000, 2000000], // 100k-2M VND
     },
     {
-      payees: ["Grab", "Uber", "Xe Om", "Bus Fare"],
-      category: "Transportation",
-      amountRange: [30, 300],
+      payees: [
+        "Grab Bike",
+        "Grab Car",
+        "Be",
+        "Gojek",
+        "Xe buýt",
+        "Xe ôm",
+        "Taxi Mai Linh",
+        "Vinasun",
+      ],
+      category: "Đi lại",
+      amountRange: [15000, 300000], // 15k-300k VND
     },
     {
-      payees: ["Petrolimex", "Shell", "Chevron"],
-      category: "Gas & Fuel",
-      amountRange: [200, 800],
+      payees: ["Petrolimex", "Shell", "Caltex", "VinFast", "BP", "Total"],
+      category: "Xăng xe",
+      amountRange: [200000, 1500000], // 200k-1.5M VND
     },
     {
-      payees: ["Shopee", "Lazada", "Tiki", "Amazon"],
-      category: "Shopping",
-      amountRange: [150, 2000],
+      payees: [
+        "Shopee",
+        "Lazada",
+        "Tiki",
+        "Sendo",
+        "Vincom",
+        "Takashimaya",
+        "Saigon Centre",
+        "Diamond Plaza",
+        "Uniqlo",
+        "H&M",
+      ],
+      category: "Mua sắm",
+      amountRange: [150000, 5000000], // 150k-5M VND
     },
     {
-      payees: ["Netflix", "Spotify", "YouTube Premium", "Disney+"],
-      category: "Subscriptions",
-      amountRange: [99, 299],
+      payees: [
+        "Netflix",
+        "Spotify",
+        "YouTube Premium",
+        "VTV Cab",
+        "FPT Play",
+        "Zing MP3",
+        "VIP Karaoke",
+      ],
+      category: "Dịch vụ trực tuyến",
+      amountRange: [79000, 400000], // 79k-400k VND
     },
     {
-      payees: ["Electric Bill", "Water Bill", "Internet Bill", "Phone Bill"],
-      category: "Bills & Utilities",
-      amountRange: [300, 1200],
+      payees: [
+        "Hóa đơn điện EVN",
+        "Hóa đơn nước",
+        "Internet FPT",
+        "Viettel",
+        "VinaPhone",
+        "MobiFone",
+        "Tiền nhà",
+        "Phí quản lý chung cư",
+      ],
+      category: "Hóa đơn & Tiện ích",
+      amountRange: [300000, 3000000], // 300k-3M VND
     },
     {
-      payees: ["Cinema", "Game Store", "Concert Ticket"],
-      category: "Entertainment",
-      amountRange: [200, 1000],
+      payees: [
+        "CGV Cinemas",
+        "Lotte Cinema",
+        "Galaxy Cinema",
+        "Game center",
+        "Karaoke Luxury",
+        "Bowling",
+        "Concert",
+        "Nhà hát",
+      ],
+      category: "Giải trí",
+      amountRange: [200000, 1500000], // 200k-1.5M VND
     },
     {
-      payees: ["Pharmacy", "Hospital", "Doctor Visit"],
-      category: "Healthcare",
-      amountRange: [150, 2000],
+      payees: [
+        "Bệnh viện Chợ Rẫy",
+        "Bệnh viện Ung Bướu",
+        "Phòng khám đa khoa",
+        "Nha khoa Paris",
+        "Nhà thuốc Long Châu",
+        "Pharmacity",
+        "Guardian",
+      ],
+      category: "Y tế",
+      amountRange: [100000, 5000000], // 100k-5M VND
     },
     {
-      payees: ["Flight Booking", "Hotel", "Travel Agency"],
-      category: "Travel",
-      amountRange: [500, 5000],
+      payees: [
+        "Vietnam Airlines",
+        "VietJet Air",
+        "Bamboo Airways",
+        "Khách sạn",
+        "Homestay",
+        "Tour du lịch",
+        "Vé tham quan",
+      ],
+      category: "Du lịch",
+      amountRange: [500000, 15000000], // 500k-15M VND
+    },
+    {
+      payees: [
+        "Học phí đại học",
+        "Khóa học online",
+        "Sách giáo khoa",
+        "Khoá học tiếng Anh",
+        "Học lái xe",
+        "Trung tâm tin học",
+      ],
+      category: "Giáo dục",
+      amountRange: [200000, 10000000], // 200k-10M VND
+    },
+    {
+      payees: [
+        "Gym California",
+        "Yoga Center",
+        "Sân tennis",
+        "Hồ bơi",
+        "Sân cầu lông",
+        "Phòng tập boxing",
+      ],
+      category: "Thể thao",
+      amountRange: [100000, 2000000], // 100k-2M VND
+    },
+    {
+      payees: [
+        "Bảo hiểm Prudential",
+        "Bảo Việt",
+        "AIA",
+        "Manulife",
+        "Bảo hiểm xe máy",
+        "Bảo hiểm y tế",
+      ],
+      category: "Bảo hiểm",
+      amountRange: [500000, 5000000], // 500k-5M VND
     },
   ];
 
-  // Tạo transactions cho 60 ngày qua để có nhiều data hơn
-  for (let i = 0; i < 60; i++) {
+  // Tạo transactions cho 90 ngày qua (3 tháng)
+  for (let i = 0; i < 90; i++) {
     const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
 
-    // Random số lượng transactions mỗi ngày
-    const numTransactions = Math.floor(Math.random() * 6) + 1; // 1-6 transactions per day
+    // Random số lượng transactions mỗi ngày (ít hơn vào cuối tuần)
+    const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+    const numTransactions = isWeekend
+      ? Math.floor(Math.random() * 4) + 1 // 1-4 transactions cuối tuần
+      : Math.floor(Math.random() * 7) + 2; // 2-8 transactions ngày thường
 
     for (let j = 0; j < numTransactions; j++) {
-      const isIncome = Math.random() < 0.15; // 15% chance là income
+      const isIncome = Math.random() < 0.12; // 12% chance là thu nhập
 
       if (isIncome) {
         // Tạo income transaction
-        const amount = Math.floor(Math.random() * 80000) + 20000; // 20k-100k VND
-        const payee =
-          incomePayees[Math.floor(Math.random() * incomePayees.length)];
+        const isLargeSalary = Math.random() < 0.1; // 10% chance lương lớn
+
+        let amount, payee;
+        if (isLargeSalary) {
+          amount = Math.floor(Math.random() * 30000000) + 15000000; // 15M-45M VND (lương tháng)
+          payee = "Lương tháng";
+        } else {
+          amount = Math.floor(Math.random() * 5000000) + 500000; // 500k-5.5M VND
+          payee = incomePayees[Math.floor(Math.random() * incomePayees.length)];
+        }
+
         const incomeCategory = categorySeed.find(
-          (cat) => cat.name === "Income"
+          (cat) => cat.name === "Thu nhập"
         );
 
         transactions.push({
           id: createId(),
-          amount,
+          amount: amount.toString(),
           payee,
-          notes: "Income transaction",
+          notes: "Thu nhập",
           date,
           accountId:
             accountSeed[Math.floor(Math.random() * accountSeed.length)].id,
@@ -200,9 +333,9 @@ const createTransactionSeed = () => {
 
         transactions.push({
           id: createId(),
-          amount,
+          amount: amount.toString(),
           payee,
-          notes: `${expenseType.category} expense`,
+          notes: `Chi tiêu ${expenseType.category}`,
           date,
           accountId:
             accountSeed[Math.floor(Math.random() * accountSeed.length)].id,
@@ -211,34 +344,42 @@ const createTransactionSeed = () => {
       }
     }
 
-    // Thêm vài transactions lớn thỉnh thoảng
-    if (Math.random() < 0.1) {
-      // 10% chance
-      const isLargeIncome = Math.random() < 0.7; // 70% chance large income vs large expense
+    // Thêm vài chi tiêu lớn đặc biệt (tiền nhà, etc.)
+    if (Math.random() < 0.03) {
+      // 3% chance mỗi ngày
+      const largeExpenses = [
+        {
+          payee: "Tiền thuê nhà",
+          amount: -(Math.floor(Math.random() * 8000000) + 5000000), // 5M-13M VND
+          category: "Nhà ở",
+        },
+        {
+          payee: "Mua xe máy",
+          amount: -(Math.floor(Math.random() * 50000000) + 20000000), // 20M-70M VND
+          category: "Mua sắm",
+        },
+        {
+          payee: "Sửa chữa nhà",
+          amount: -(Math.floor(Math.random() * 15000000) + 5000000), // 5M-20M VND
+          category: "Nhà ở",
+        },
+      ];
 
-      if (isLargeIncome) {
-        transactions.push({
-          id: createId(),
-          amount: Math.floor(Math.random() * 500000) + 100000, // 100k-600k VND
-          payee: "Monthly Salary",
-          notes: "Monthly salary payment",
-          date,
-          accountId: accountSeed[0].id, // Main checking account
-          categoryId:
-            categorySeed.find((cat) => cat.name === "Income")?.id || null,
-        });
-      } else {
-        transactions.push({
-          id: createId(),
-          amount: -(Math.floor(Math.random() * 50000) + 10000), // -10k to -60k VND
-          payee: "Major Purchase",
-          notes: "Large expense",
-          date,
-          accountId: accountSeed[2].id, // Credit card
-          categoryId:
-            categorySeed.find((cat) => cat.name === "Shopping")?.id || null,
-        });
-      }
+      const largeExpense =
+        largeExpenses[Math.floor(Math.random() * largeExpenses.length)];
+      const category = categorySeed.find(
+        (cat) => cat.name === largeExpense.category
+      );
+
+      transactions.push({
+        id: createId(),
+        amount: largeExpense.amount.toString(),
+        payee: largeExpense.payee,
+        notes: "Chi tiêu lớn",
+        date,
+        accountId: accountSeed[2].id, // Thẻ tín dụng
+        categoryId: category?.id || null,
+      });
     }
   }
 
@@ -247,66 +388,72 @@ const createTransactionSeed = () => {
 
 async function seed() {
   try {
-    console.log("🔄 Starting database seed...");
-    console.log(`👤 Seeding data for user: ${YOUR_USER_ID}`);
+    console.log("🔄 Bắt đầu seed database...");
+    console.log(`👤 Tạo dữ liệu cho user: ${YOUR_USER_ID}`);
 
     // Test connection
     const client = await pool.connect();
-    console.log("✅ Database connection successful");
+    console.log("✅ Kết nối database thành công");
     client.release();
 
-    console.log("🧹 Clearing existing data...");
+    console.log("🧹 Xóa dữ liệu cũ...");
     await db.delete(transactions).execute();
     await db.delete(subscriptions).execute();
     await db.delete(categories).execute();
     await db.delete(accounts).execute();
-    console.log("✅ Existing data cleared");
+    console.log("✅ Đã xóa dữ liệu cũ");
 
-    console.log("🌱 Seeding accounts...");
+    console.log("🌱 Tạo tài khoản...");
     await db.insert(accounts).values(accountSeed).execute();
-    console.log(`✅ Inserted ${accountSeed.length} accounts`);
+    console.log(`✅ Đã tạo ${accountSeed.length} tài khoản`);
 
-    console.log("🌱 Seeding categories...");
+    console.log("🌱 Tạo danh mục...");
     await db.insert(categories).values(categorySeed).execute();
-    console.log(`✅ Inserted ${categorySeed.length} categories`);
+    console.log(`✅ Đã tạo ${categorySeed.length} danh mục`);
 
-    console.log("🌱 Seeding subscriptions...");
+    console.log("🌱 Tạo subscription...");
     await db.insert(subscriptions).values(subscriptionSeed).execute();
-    console.log(`✅ Inserted ${subscriptionSeed.length} subscriptions`);
+    console.log(`✅ Đã tạo ${subscriptionSeed.length} subscription`);
 
-    console.log("🌱 Generating and seeding transactions...");
+    console.log("🌱 Tạo giao dịch...");
     const transactionSeed = createTransactionSeed();
 
-    // Insert transactions in batches
+    // Insert transactions theo batch
     const batchSize = 100;
     for (let i = 0; i < transactionSeed.length; i += batchSize) {
       const batch = transactionSeed.slice(i, i + batchSize);
       await db.insert(transactions).values(batch).execute();
       console.log(
-        `   📦 Inserted batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(transactionSeed.length / batchSize)}`
+        `   📦 Đã tạo batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(transactionSeed.length / batchSize)}`
       );
     }
-    console.log(`✅ Inserted ${transactionSeed.length} transactions`);
+    console.log(`✅ Đã tạo ${transactionSeed.length} giao dịch`);
 
-    console.log("\n🎉 Seed completed successfully!");
-    console.log("📊 Summary:");
+    console.log("\n🎉 Seed hoàn thành!");
+    console.log("📊 Tóm tắt dữ liệu:");
     console.log(`   👤 User: ${YOUR_USER_ID}`);
-    console.log(`   🏦 ${accountSeed.length} accounts`);
-    console.log(`   📂 ${categorySeed.length} categories`);
-    console.log(`   💳 ${subscriptionSeed.length} subscription (Premium)`);
-    console.log(`   💰 ${transactionSeed.length} transactions`);
-    console.log(`   📅 Data range: Last 60 days`);
+    console.log(
+      `   🏦 ${accountSeed.length} tài khoản (Vietcombank, BIDV, MoMo, ZaloPay...)`
+    );
+    console.log(
+      `   📂 ${categorySeed.length} danh mục (Ăn uống, Đi lại, Y tế...)`
+    );
+    console.log(`   💎 ${subscriptionSeed.length} subscription (Premium)`);
+    console.log(`   💰 ${transactionSeed.length} giao dịch`);
+    console.log(`   📅 Dữ liệu: 90 ngày gần nhất`);
+    console.log(`   💵 Tiền tệ: VND (Việt Nam Đồng)`);
 
-    console.log("\n🚀 You can now:");
-    console.log("   • Login to your app");
-    console.log("   • View your dashboard with real data");
-    console.log("   • Test all features with realistic transactions");
+    console.log("\n🚀 Bây giờ bạn có thể:");
+    console.log("   • Đăng nhập vào ứng dụng");
+    console.log("   • Xem dashboard với dữ liệu thực tế");
+    console.log("   • Test tất cả tính năng với giao dịch VND");
+    console.log("   • Xem biểu đồ thu chi 3 tháng qua");
   } catch (err) {
-    console.error("❌ Seed failed:", err);
+    console.error("❌ Seed thất bại:", err);
     process.exit(1);
   } finally {
     await pool.end();
-    console.log("🔐 Database connection closed");
+    console.log("🔐 Đã đóng kết nối database");
   }
 }
 
