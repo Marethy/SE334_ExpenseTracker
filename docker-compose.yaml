@@ -3,7 +3,7 @@ services:
     image: postgres:15-alpine
     container_name: customerdb
     ports:
-      - "5448:5432"
+      - "5432:5432"
     environment:
       - POSTGRES_DB=customerdb
       - POSTGRES_USER=spring
