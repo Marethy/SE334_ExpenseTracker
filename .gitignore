@@ -1,4 +1,3 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
 /node_modules
@@ -41,4 +40,4 @@ seed.ts
 
 # lock
 pnpm-lock.yaml
-package-lock.json
+package-lock.jsondist/
