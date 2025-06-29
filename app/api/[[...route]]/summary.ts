@@ -7,7 +7,11 @@ import { subDays, parse, differenceInDays } from "date-fns";
 
 import { db } from "@/db/drizzle";
 import { accounts, categories, transactions } from "@/db/schema";
-import { calculatePercentageChange, fillMissingDays } from "@/lib/utils";
+import {
+  calculatePercentageChange,
+  fillMissingDays,
+  parseAmountFromDB,
+} from "@/lib/utils";
 
 const app = new Hono().get(
   "/",
@@ -45,14 +49,17 @@ const app = new Hono().get(
           db
             .select({
               income:
-                sql`SUM(CASE WHEN ${transactions.amount} >= 0 THEN ${transactions.amount} ELSE 0 END)`.mapWith(
-                  Number
+                sql`SUM(CASE WHEN CAST(${transactions.amount} AS DECIMAL) >= 0 THEN CAST(${transactions.amount} AS DECIMAL) ELSE 0 END)`.mapWith(
+                  (value) => parseAmountFromDB(value?.toString() || "0")
                 ),
               expenses:
-                sql`SUM(CASE WHEN ${transactions.amount} < 0 THEN ${transactions.amount} ELSE 0 END)`.mapWith(
-                  Number
+                sql`SUM(CASE WHEN CAST(${transactions.amount} AS DECIMAL) < 0 THEN CAST(${transactions.amount} AS DECIMAL) ELSE 0 END)`.mapWith(
+                  (value) => parseAmountFromDB(value?.toString() || "0")
                 ),
-              remaining: sql`SUM(${transactions.amount})`.mapWith(Number),
+              remaining:
+                sql`SUM(CAST(${transactions.amount} AS DECIMAL))`.mapWith(
+                  (value) => parseAmountFromDB(value?.toString() || "0")
+                ),
             })
             .from(transactions)
             .innerJoin(accounts, eq(transactions.accountId, accounts.id))
@@ -69,14 +76,17 @@ const app = new Hono().get(
           db
             .select({
               income:
-                sql`SUM(CASE WHEN ${transactions.amount} >= 0 THEN ${transactions.amount} ELSE 0 END)`.mapWith(
-                  Number
+                sql`SUM(CASE WHEN CAST(${transactions.amount} AS DECIMAL) >= 0 THEN CAST(${transactions.amount} AS DECIMAL) ELSE 0 END)`.mapWith(
+                  (value) => parseAmountFromDB(value?.toString() || "0")
                 ),
               expenses:
-                sql`SUM(CASE WHEN ${transactions.amount} < 0 THEN ${transactions.amount} ELSE 0 END)`.mapWith(
-                  Number
+                sql`SUM(CASE WHEN CAST(${transactions.amount} AS DECIMAL) < 0 THEN CAST(${transactions.amount} AS DECIMAL) ELSE 0 END)`.mapWith(
+                  (value) => parseAmountFromDB(value?.toString() || "0")
                 ),
-              remaining: sql`SUM(${transactions.amount})`.mapWith(Number),
+              remaining:
+                sql`SUM(CAST(${transactions.amount} AS DECIMAL))`.mapWith(
+                  (value) => parseAmountFromDB(value?.toString() || "0")
+                ),
             })
             .from(transactions)
             .innerJoin(accounts, eq(transactions.accountId, accounts.id))
@@ -93,7 +103,10 @@ const app = new Hono().get(
           db
             .select({
               name: categories.name,
-              value: sql`SUM(ABS(${transactions.amount}))`.mapWith(Number),
+              value:
+                sql`SUM(ABS(CAST(${transactions.amount} AS DECIMAL)))`.mapWith(
+                  (value) => parseAmountFromDB(value?.toString() || "0")
+                ),
             })
             .from(transactions)
             .innerJoin(accounts, eq(transactions.accountId, accounts.id))
@@ -102,26 +115,28 @@ const app = new Hono().get(
               and(
                 accountId ? eq(transactions.accountId, accountId) : undefined,
                 eq(accounts.userId, auth.userId),
-                sql`${transactions.amount} < 0`,
+                sql`CAST(${transactions.amount} AS DECIMAL) < 0`,
                 gte(transactions.date, startDate),
                 lte(transactions.date, endDate)
               )
             )
             .groupBy(categories.name)
-            .orderBy(desc(sql`SUM(ABS(${transactions.amount}))`))
-            .limit(10), // Giới hạn để tránh tải quá nhiều data
+            .orderBy(
+              desc(sql`SUM(ABS(CAST(${transactions.amount} AS DECIMAL)))`)
+            )
+            .limit(10),
 
           // Active days data
           db
             .select({
               date: transactions.date,
               income:
-                sql`SUM(CASE WHEN ${transactions.amount} >= 0 THEN ${transactions.amount} ELSE 0 END)`.mapWith(
-                  Number
+                sql`SUM(CASE WHEN CAST(${transactions.amount} AS DECIMAL) >= 0 THEN CAST(${transactions.amount} AS DECIMAL) ELSE 0 END)`.mapWith(
+                  (value) => parseAmountFromDB(value?.toString() || "0")
                 ),
               expenses:
-                sql`SUM(CASE WHEN ${transactions.amount} < 0 THEN ABS(${transactions.amount}) ELSE 0 END)`.mapWith(
-                  Number
+                sql`SUM(CASE WHEN CAST(${transactions.amount} AS DECIMAL) < 0 THEN ABS(CAST(${transactions.amount} AS DECIMAL)) ELSE 0 END)`.mapWith(
+                  (value) => parseAmountFromDB(value?.toString() || "0")
                 ),
             })
             .from(transactions)
@@ -143,16 +158,16 @@ const app = new Hono().get(
       const [lastPeriod] = lastPeriodData;
 
       const incomeChange = calculatePercentageChange(
-        currentPeriod.income,
-        lastPeriod.income
+        currentPeriod?.income || 0,
+        lastPeriod?.income || 0
       );
       const expensesChange = calculatePercentageChange(
-        currentPeriod.expenses,
-        lastPeriod.expenses
+        currentPeriod?.expenses || 0,
+        lastPeriod?.expenses || 0
       );
       const remainingChange = calculatePercentageChange(
-        currentPeriod.remaining,
-        lastPeriod.remaining
+        currentPeriod?.remaining || 0,
+        lastPeriod?.remaining || 0
       );
 
       // Process categories
@@ -172,11 +187,11 @@ const app = new Hono().get(
 
       return c.json({
         data: {
-          remainingAmount: currentPeriod.remaining,
+          remainingAmount: currentPeriod?.remaining || 0,
           remainingChange,
-          incomeAmount: currentPeriod.income,
+          incomeAmount: currentPeriod?.income || 0,
           incomeChange,
-          expensesAmount: currentPeriod.expenses,
+          expensesAmount: currentPeriod?.expenses || 0,
           expensesChange,
           categories: finalCategories,
           days,

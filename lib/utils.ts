@@ -111,3 +111,36 @@ export function isValidVNDAmount(amount: string | number): boolean {
   const numAmount = typeof amount === "string" ? parseFloat(amount) : amount;
   return !isNaN(numAmount) && isFinite(numAmount) && numAmount >= 0;
 }
+
+// Thêm các hàm còn thiếu cho milliunits conversion (để backward compatibility)
+export function convertAmountToMilliUnits(amount: number): number {
+  return Math.round(amount * 1000);
+}
+
+export function convertAmountFromMilliUnits(amount: number): number {
+  return amount / 1000;
+}
+
+// Hàm mới để xử lý VND amounts
+export function convertToVNDString(amount: number): string {
+  return amount.toString();
+}
+
+export function convertFromVNDString(amount: string): number {
+  return parseFloat(amount) || 0;
+}
+
+// Validate VND amount with reasonable limits
+export function validateVNDAmount(amount: number): boolean {
+  return isValidVNDAmount(amount) && amount <= 999999999999;
+}
+
+// Format amount for database storage
+export function formatAmountForDB(amount: number): string {
+  return amount.toFixed(2);
+}
+
+// Parse amount from database
+export function parseAmountFromDB(amount: string): number {
+  return parseFloat(amount);
+}

@@ -1,24 +1,24 @@
-import { z } from 'zod';
-import { Trash } from 'lucide-react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from "zod";
+import { Trash } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
-import { Select } from '@/components/select';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { DatePicker } from '@/components/date-picker';
-import { convertAmountToMilliUnits } from '@/lib/utils';
-import { AmountInput } from '@/components/amount-input';
+import { Select } from "@/components/select";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { DatePicker } from "@/components/date-picker";
+import { formatAmountForDB } from "@/lib/utils";
+import { AmountInput } from "@/components/amount-input";
 import {
   Form,
   FormControl,
   FormField,
   FormItem,
   FormLabel,
-} from '@/components/ui/form';
+} from "@/components/ui/form";
 
-import { insertTransactionSchema } from '@/db/schema';
+import { insertTransactionSchema } from "@/db/schema";
 
 const formSchema = z.object({
   date: z.coerce.date(),
@@ -66,10 +66,10 @@ export const TransactionForm = ({
 
   const handleSubmit = (values: FormValues) => {
     const amount = parseFloat(values.amount);
-    const amountInMilliUnits = convertAmountToMilliUnits(amount);
+    const amountForDB = formatAmountForDB(amount);
     onSubmit({
       ...values,
-      amount: amountInMilliUnits,
+      amount: amountForDB,
     });
   };
 
@@ -182,7 +182,7 @@ export const TransactionForm = ({
               <FormControl>
                 <Textarea
                   {...field}
-                  value={field.value ?? ''}
+                  value={field.value ?? ""}
                   disabled={disabled}
                   placeholder="Optional Notes"
                 />
@@ -192,10 +192,9 @@ export const TransactionForm = ({
         />
 
         <Button className="w-full" disabled={disabled}>
-          {id ? 'Save changes' : 'Create transaction'}
+          {id ? "Save changes" : "Create transaction"}
         </Button>
 
-        {/* !!id === id we've written like this so because it is a boolean */}
         {!!id && (
           <Button
             type="button"

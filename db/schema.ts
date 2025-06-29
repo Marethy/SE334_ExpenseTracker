@@ -40,7 +40,7 @@ export const transactions = pgTable(
   "transactions",
   {
     id: text("id").primaryKey(),
-    // Sử dụng decimal với precision và scale cho VND
+    // Sử dụng decimal với precision và scale cho VND (tối đa 999 tỷ VND)
     amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
     payee: text("payee").notNull(),
     notes: text("notes"),
@@ -114,7 +114,7 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
   }),
 }));
 
-// Zod schemas - Cập nhật để hỗ trợ decimal cho VND
+// Zod schemas - Cập nhật để hỗ trợ VND properly
 export const insertAccountSchema = createInsertSchema(accounts, {
   name: z.string().min(1, "Account name is required"),
   userId: z.string().min(1, "User ID is required"),
@@ -126,17 +126,19 @@ export const insertCategorySchema = createInsertSchema(categories, {
 });
 
 export const insertTransactionSchema = createInsertSchema(transactions, {
-  // Cho phép decimal numbers cho VND, không ép kiểu integer
   amount: z
-    .string()
+    .union([z.string(), z.number()])
     .refine(
       (val) => {
-        const num = parseFloat(val);
+        const num = typeof val === "string" ? parseFloat(val) : val;
         return !isNaN(num) && isFinite(num);
       },
       { message: "Amount must be a valid number" }
     )
-    .transform((val) => parseFloat(val)),
+    .transform((val) => {
+      const num = typeof val === "string" ? parseFloat(val) : val;
+      return num.toFixed(2); // Store as decimal string
+    }),
   payee: z.string().min(1, "Payee is required"),
   notes: z.string().optional(),
   date: z.coerce.date(),

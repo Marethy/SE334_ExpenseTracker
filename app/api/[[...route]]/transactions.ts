@@ -13,8 +13,8 @@ import {
   categories,
   accounts,
 } from "@/db/schema";
+import { parseAmountFromDB } from "@/lib/utils";
 
-// chain the handlers so that the types are always inferred
 const app = new Hono()
   .get(
     "/",
@@ -27,7 +27,6 @@ const app = new Hono()
       })
     ),
     async (c) => {
-      // Get authenticated user
       const auth = getAuth(c);
       const { from, to, accountId } = c.req.valid("query");
 
@@ -35,7 +34,6 @@ const app = new Hono()
         return c.json({ error: "Unauthorized" }, 401);
       }
 
-      // if none is passed, we will show the last dates transactions data
       const defaultTo = new Date();
       const defaultFrom = subDays(defaultTo, 30);
 
@@ -45,35 +43,43 @@ const app = new Hono()
 
       const endDate = to ? parse(to, "yyyy-MM-dd", new Date()) : defaultTo;
 
-      // select will return data which will be array
-      const data = await db
-        .select({
-          id: transactions.id,
-          category: categories.name,
-          // we're doing categoryId so that we can find the category in the array of categories, because categoryName doesn't have to be unique so we need both
-          categoryId: transactions.categoryId,
-          date: transactions.date,
-          payee: transactions.payee,
-          amount: transactions.amount,
-          notes: transactions.notes,
-          account: accounts.name,
-          accountId: transactions.accountId,
-        })
-        .from(transactions)
-        // using innerJoin because both sides of the table relations exist & we don't want to load transactions which don't have accountId & account is required
-        .innerJoin(accounts, eq(transactions.accountId, accounts.id))
-        .leftJoin(categories, eq(transactions.categoryId, categories.id))
-        .where(
-          and(
-            accountId ? eq(transactions.accountId, accountId) : undefined,
-            eq(accounts.userId, auth.userId),
-            gte(transactions.date, startDate),
-            lte(transactions.date, endDate)
+      try {
+        const data = await db
+          .select({
+            id: transactions.id,
+            category: categories.name,
+            categoryId: transactions.categoryId,
+            date: transactions.date,
+            payee: transactions.payee,
+            amount: transactions.amount,
+            notes: transactions.notes,
+            account: accounts.name,
+            accountId: transactions.accountId,
+          })
+          .from(transactions)
+          .innerJoin(accounts, eq(transactions.accountId, accounts.id))
+          .leftJoin(categories, eq(transactions.categoryId, categories.id))
+          .where(
+            and(
+              accountId ? eq(transactions.accountId, accountId) : undefined,
+              eq(accounts.userId, auth.userId),
+              gte(transactions.date, startDate),
+              lte(transactions.date, endDate)
+            )
           )
-        )
-        .orderBy(desc(transactions.date));
+          .orderBy(desc(transactions.date));
 
-      return c.json({ data });
+        // Convert decimal amounts to numbers for frontend
+        const processedData = data.map((transaction) => ({
+          ...transaction,
+          amount: parseAmountFromDB(transaction.amount),
+        }));
+
+        return c.json({ data: processedData });
+      } catch (error) {
+        console.error("Transactions API Error:", error);
+        return c.json({ error: "Internal Server Error" }, 500);
+      }
     }
   )
   .get(
@@ -96,31 +102,42 @@ const app = new Hono()
         return c.json({ error: "Unauthorized" }, 401);
       }
 
-      const [data] = await db
-        .select({
-          id: transactions.id,
-          categoryId: transactions.categoryId,
-          date: transactions.date,
-          payee: transactions.payee,
-          amount: transactions.amount,
-          notes: transactions.notes,
-          accountId: transactions.accountId,
-        })
-        .from(transactions)
-        .innerJoin(accounts, eq(transactions.accountId, accounts.id))
-        .where(and(eq(transactions.id, id), eq(accounts.userId, auth.userId)));
+      try {
+        const [data] = await db
+          .select({
+            id: transactions.id,
+            categoryId: transactions.categoryId,
+            date: transactions.date,
+            payee: transactions.payee,
+            amount: transactions.amount,
+            notes: transactions.notes,
+            accountId: transactions.accountId,
+          })
+          .from(transactions)
+          .innerJoin(accounts, eq(transactions.accountId, accounts.id))
+          .where(
+            and(eq(transactions.id, id), eq(accounts.userId, auth.userId))
+          );
 
-      if (!data) {
-        return c.json({ error: "Not found" }, 404);
+        if (!data) {
+          return c.json({ error: "Not found" }, 404);
+        }
+
+        // Convert decimal amount to number for frontend
+        const processedData = {
+          ...data,
+          amount: parseAmountFromDB(data.amount),
+        };
+
+        return c.json({ data: processedData });
+      } catch (error) {
+        console.error("Transaction Get API Error:", error);
+        return c.json({ error: "Internal Server Error" }, 500);
       }
-
-      return c.json({ data });
     }
   )
   .post(
     "/",
-
-    // validate using zod what kind of json this POST request accepts by adding a validator zValidator
     zValidator(
       "json",
       insertTransactionSchema.omit({
@@ -129,28 +146,30 @@ const app = new Hono()
     ),
     async (c) => {
       const auth = getAuth(c);
-      // Inside the values we get the name
       const values = c.req.valid("json");
 
       if (!auth?.userId) {
         return c.json({ error: "Unauthorized" }, 401);
       }
 
-      // insert will not return anything that's why we chain it with .returning()
-      const [data] = await db
-        .insert(transactions)
-        .values({
-          id: createId(),
-          ...values,
-        })
-        .returning();
+      try {
+        const [data] = await db
+          .insert(transactions)
+          .values({
+            id: createId(),
+            ...values,
+          })
+          .returning();
 
-      return c.json({ data });
+        return c.json({ data });
+      } catch (error) {
+        console.error("Transaction Create API Error:", error);
+        return c.json({ error: "Internal Server Error" }, 500);
+      }
     }
   )
   .post(
     "/bulk-create",
-
     zValidator(
       "json",
       z.array(
@@ -167,23 +186,26 @@ const app = new Hono()
         return c.json({ error: "Unauthorized" }, 401);
       }
 
-      const data = await db
-        .insert(transactions)
-        .values(
-          values.map((value) => ({
-            id: createId(),
-            ...value,
-          }))
-        )
-        .returning();
+      try {
+        const data = await db
+          .insert(transactions)
+          .values(
+            values.map((value) => ({
+              id: createId(),
+              ...value,
+            }))
+          )
+          .returning();
 
-      return c.json({ data });
+        return c.json({ data });
+      } catch (error) {
+        console.error("Transaction Bulk Create API Error:", error);
+        return c.json({ error: "Internal Server Error" }, 500);
+      }
     }
   )
-  // Bulk delete account API
   .post(
     "/bulk-delete",
-
     zValidator(
       "json",
       z.object({
@@ -198,40 +220,42 @@ const app = new Hono()
         return c.json({ error: "Unauthorized" }, 401);
       }
 
-      const transactionsToDelete = db.$with("transactions_to_delete").as(
-        db
-          .select({ id: transactions.id })
-          .from(transactions)
-          .innerJoin(accounts, eq(transactions.accountId, accounts.id))
+      try {
+        const transactionsToDelete = db.$with("transactions_to_delete").as(
+          db
+            .select({ id: transactions.id })
+            .from(transactions)
+            .innerJoin(accounts, eq(transactions.accountId, accounts.id))
+            .where(
+              and(
+                inArray(transactions.id, values.ids),
+                eq(accounts.userId, auth.userId)
+              )
+            )
+        );
+
+        const data = await db
+          .with(transactionsToDelete)
+          .delete(transactions)
           .where(
-            and(
-              inArray(transactions.id, values.ids),
-              eq(accounts.userId, auth.userId)
+            inArray(
+              transactions.id,
+              sql`(select id from ${transactionsToDelete})`
             )
           )
-      );
+          .returning({
+            id: transactions.id,
+          });
 
-      const data = await db
-        .with(transactionsToDelete)
-        .delete(transactions)
-        // only delete transactions where id matches the list of ids which is transactionsToDelete
-        .where(
-          inArray(
-            transactions.id,
-            sql`(select id from ${transactionsToDelete})`
-          )
-        )
-        .returning({
-          id: transactions.id,
-        });
-
-      return c.json({ data });
+        return c.json({ data });
+      } catch (error) {
+        console.error("Transaction Bulk Delete API Error:", error);
+        return c.json({ error: "Internal Server Error" }, 500);
+      }
     }
   )
   .patch(
     "/:id",
-
-    // Chaining two validators - first the id to patch & second one the json obj
     zValidator(
       "param",
       z.object({
@@ -257,36 +281,42 @@ const app = new Hono()
         return c.json({ error: "Unauthorized" }, 401);
       }
 
-      const transactionsToUpdate = db.$with("transactions_to_update").as(
-        db
-          .select({ id: transactions.id })
-          .from(transactions)
-          .innerJoin(accounts, eq(transactions.accountId, accounts.id))
-          .where(and(eq(transactions.id, id), eq(accounts.userId, auth.userId)))
-      );
+      try {
+        const transactionsToUpdate = db.$with("transactions_to_update").as(
+          db
+            .select({ id: transactions.id })
+            .from(transactions)
+            .innerJoin(accounts, eq(transactions.accountId, accounts.id))
+            .where(
+              and(eq(transactions.id, id), eq(accounts.userId, auth.userId))
+            )
+        );
 
-      const [data] = await db
-        .with(transactionsToUpdate)
-        .update(transactions)
-        .set(values)
-        .where(
-          inArray(
-            transactions.id,
-            sql`(select id from ${transactionsToUpdate})`
+        const [data] = await db
+          .with(transactionsToUpdate)
+          .update(transactions)
+          .set(values)
+          .where(
+            inArray(
+              transactions.id,
+              sql`(select id from ${transactionsToUpdate})`
+            )
           )
-        )
-        .returning();
+          .returning();
 
-      if (!data) {
-        return c.json({ error: "Not found" }, 404);
+        if (!data) {
+          return c.json({ error: "Not found" }, 404);
+        }
+
+        return c.json({ data });
+      } catch (error) {
+        console.error("Transaction Update API Error:", error);
+        return c.json({ error: "Internal Server Error" }, 500);
       }
-
-      return c.json({ data });
     }
   )
   .delete(
     "/:id",
-
     zValidator(
       "param",
       z.object({
@@ -305,30 +335,37 @@ const app = new Hono()
         return c.json({ error: "Unauthorized" }, 401);
       }
 
-      const transactionsToDelete = db.$with("transactions_to_delete").as(
-        db
-          .select({ id: transactions.id })
-          .from(transactions)
-          .innerJoin(accounts, eq(transactions.accountId, accounts.id))
-          .where(and(eq(transactions.id, id), eq(accounts.userId, auth.userId)))
-      );
+      try {
+        const transactionsToDelete = db.$with("transactions_to_delete").as(
+          db
+            .select({ id: transactions.id })
+            .from(transactions)
+            .innerJoin(accounts, eq(transactions.accountId, accounts.id))
+            .where(
+              and(eq(transactions.id, id), eq(accounts.userId, auth.userId))
+            )
+        );
 
-      const [data] = await db
-        .with(transactionsToDelete)
-        .delete(transactions)
-        .where(
-          inArray(
-            transactions.id,
-            sql`(select id from ${transactionsToDelete})`
+        const [data] = await db
+          .with(transactionsToDelete)
+          .delete(transactions)
+          .where(
+            inArray(
+              transactions.id,
+              sql`(select id from ${transactionsToDelete})`
+            )
           )
-        )
-        .returning({ id: transactions.id });
+          .returning({ id: transactions.id });
 
-      if (!data) {
-        return c.json({ error: "Not found" }, 404);
+        if (!data) {
+          return c.json({ error: "Not found" }, 404);
+        }
+
+        return c.json({ data });
+      } catch (error) {
+        console.error("Transaction Delete API Error:", error);
+        return c.json({ error: "Internal Server Error" }, 500);
       }
-
-      return c.json({ data });
     }
   );
 
