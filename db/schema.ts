@@ -11,7 +11,6 @@ import {
   boolean,
 } from "drizzle-orm/pg-core";
 
-// Accounts table - giữ nguyên structure cũ + thêm indexes
 export const accounts = pgTable(
   "accounts",
   {
