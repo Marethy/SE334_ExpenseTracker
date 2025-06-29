@@ -1,16 +1,16 @@
 services:
   customerdb:
-    image: postgres:alpine
+    image: postgres:15-alpine
     container_name: customerdb
+    ports:
+      - "5448:5432"
     environment:
-      POSTGRES_USER: "admin"
-      POSTGRES_PASSWORD: "Marethyu2004!"
-      POSTGRES_DB: CustomerDb
+      - POSTGRES_DB=customerdb
+      - POSTGRES_USER=spring
+      - POSTGRES_PASSWORD=spring
     restart: always
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5440:5432"
+      - postgres-data:/var/lib/postgresql/data
 
 volumes:
-  postgres_data:
+  postgres-data:
