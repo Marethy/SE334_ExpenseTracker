@@ -3,21 +3,24 @@ import {
   RadialBarChart,
   Legend,
   ResponsiveContainer,
-} from 'recharts';
+} from "recharts";
 
-import { formatCurrency } from '@/lib/utils';
-import { CategoryTooltip } from '@/components/category-tooltip';
-
-const COLORS = ['#0062FF', '#12C6FF', '#FF647F', '#FF9354'];
+import { formatCurrency } from "@/lib/utils";
+import { CategoryTooltip } from "@/components/category-tooltip";
+import { DEFAULT_CHART_COLORS } from "@/components/chart-colors";
 
 type Props = {
   data: {
     name: string;
     value: number;
   }[];
+  colors?: string[];
 };
 
-export const RadialVariant = ({ data }: Props) => {
+export const RadialVariant = ({
+  data,
+  colors = DEFAULT_CHART_COLORS,
+}: Props) => {
   return (
     <ResponsiveContainer width="100%" height={350}>
       <RadialBarChart
@@ -28,14 +31,14 @@ export const RadialVariant = ({ data }: Props) => {
         outerRadius="40%"
         data={data.map((item, index) => ({
           ...item,
-          fill: COLORS[index % COLORS.length],
+          fill: colors[index % colors.length],
         }))}
       >
         <RadialBar
           label={{
-            position: 'insideStart',
-            fill: '#fff',
-            fontSize: '12px',
+            position: "insideStart",
+            fill: "#fff",
+            fontSize: "12px",
           }}
           background
           dataKey="value"

@@ -5,21 +5,21 @@ import {
   PieChart,
   ResponsiveContainer,
   Tooltip,
-} from 'recharts';
+} from "recharts";
 
-import { formatPercentage } from '@/lib/utils';
-import { CategoryTooltip } from '@/components/category-tooltip';
-
-const COLORS = ['#0062FF', '#12C6FF', '#FF647F', '#FF9354'];
+import { formatPercentage } from "@/lib/utils";
+import { CategoryTooltip } from "@/components/category-tooltip";
+import { DEFAULT_CHART_COLORS } from "@/components/chart-colors";
 
 type Props = {
   data: {
     name: string;
     value: number;
   }[];
+  colors?: string[];
 };
 
-export const PieVariant = ({ data }: Props) => {
+export const PieVariant = ({ data, colors = DEFAULT_CHART_COLORS }: Props) => {
   return (
     <ResponsiveContainer width="100%" height={350}>
       <PieChart>
@@ -67,7 +67,7 @@ export const PieVariant = ({ data }: Props) => {
           labelLine={false}
         >
           {data.map((_entry, index) => (
-            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+            <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
           ))}
         </Pie>
       </PieChart>
