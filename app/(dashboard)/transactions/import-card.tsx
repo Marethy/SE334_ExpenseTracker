@@ -94,6 +94,18 @@ export const ImportCard = ({ data, onCancel, onSubmit }: Props) => {
       }, {});
     });
 
+    // Debug nhanh keys của mỗi item
+    if (arrayOfData.length > 0) {
+      console.log('Sample item keys:', Object.keys(arrayOfData[0]));
+    }
+
+    // Kiểm tra xem có row nào thiếu date không
+    const missingDates = arrayOfData.filter(i => i.date == null || i.date === '').length;
+    if (missingDates > 0) {
+      alert(`Có ${missingDates} dòng chưa được map cột Date. Vui lòng kiểm tra lại bước Mapping.`);
+      return;
+    }
+
     const formattedData = arrayOfData.map((item) => {
       let dateObj: Date;
 
