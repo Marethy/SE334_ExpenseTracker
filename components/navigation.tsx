@@ -1,4 +1,3 @@
-// components/navigation.tsx
 "use client";
 
 import { Menu } from "lucide-react";
@@ -25,6 +24,10 @@ const routes = [
   {
     href: "/categories",
     label: "Categories",
+  },
+  {
+    href: "/ai",
+    label: "AI Assistant",
   },
   {
     href: "/settings",
@@ -58,7 +61,6 @@ const Navigation = () => {
     setIsOpen(false);
   };
 
-  // Prevent hydration mismatch
   if (!mounted) {
     return (
       <nav className="hidden lg:flex items-center gap-x-2 overflow-x-auto">

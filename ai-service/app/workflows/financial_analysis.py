@@ -1,7 +1,6 @@
-import operator
-from typing import Annotated, Dict, Any, List, Optional, TypedDict, Literal
+from typing import Dict, Any, List, Optional, TypedDict, Literal
 from langgraph.graph import StateGraph, END
-from langgraph.checkpoint.sqlite import SqliteSaver
+from langgraph.checkpoint.memory import MemorySaver
 from app.agents.sql_agent import get_sql_agent
 from app.services.grok_service import GrokService
 from app.services.context_service import ContextService
@@ -17,13 +16,13 @@ class FinancialState(TypedDict):
     user_id: str
     user_question: str
 
-    # System context (cached, not repeated)
+    # System context
     system_prompt: str
     user_context: Dict[str, Any]
     context_loaded: bool
 
     # Analysis results
-    sql_analysis: Dict[str, Any]  # State key
+    sql_analysis: Dict[str, Any]
     similar_patterns: List[Dict]
 
     # Response generation
@@ -46,20 +45,17 @@ class FinancialWorkflow:
 
         self.workflow = self._create_workflow()
 
-        memory = SqliteSaver.from_conn_string(":memory:")
-        self.app = self.workflow.compile(
-            checkpointer=memory,
-            interrupt_before=[],
-            interrupt_after=[]
-        )
+        # Use MemorySaver instead of SqliteSaver to avoid session conflicts
+        memory = MemorySaver()
+        self.app = self.workflow.compile(checkpointer=memory)
 
     def _create_workflow(self) -> StateGraph:
         """Create optimized workflow with minimal state transitions"""
         workflow = StateGraph(FinancialState)
 
-        # Đổi tên nodes để tránh conflict với state keys
+        # Define nodes
         workflow.add_node("load_context_step", self._load_context_cached)
-        workflow.add_node("execute_sql_step", self._sql_analysis)  # Đổi từ "sql_analysis"
+        workflow.add_node("execute_sql_step", self._sql_analysis)
         workflow.add_node("generate_response_step", self._generate_response_streaming)
         workflow.add_node("handle_error_step", self._handle_error_minimal)
 
@@ -93,9 +89,10 @@ class FinancialWorkflow:
         try:
             user_id = state["user_id"]
 
+            # Check cache first
             if user_id in self._context_cache:
                 cached_time = self._context_cache[user_id].get("timestamp", 0)
-                if datetime.now().timestamp() - cached_time < 300:
+                if datetime.now().timestamp() - cached_time < 300:  # 5 minute cache
                     state.update({
                         "user_context": self._context_cache[user_id]["data"],
                         "system_prompt": self._get_cached_system_prompt(user_id),
@@ -104,7 +101,7 @@ class FinancialWorkflow:
                     })
                     return state
 
-            # Safely get user context
+            # Load fresh context
             try:
                 if embeddings_service:
                     user_context = await embeddings_service.get_user_context(user_id)
@@ -114,6 +111,7 @@ class FinancialWorkflow:
                 logger.warning(f"Embeddings service error: {e}")
                 user_context = {}
 
+            # Cache the context
             self._context_cache[user_id] = {
                 "data": user_context,
                 "timestamp": datetime.now().timestamp()
@@ -149,7 +147,7 @@ class FinancialWorkflow:
             state["sql_analysis"] = result
 
             if result["success"]:
-                logger.info(f"Optimized SQL analysis completed")
+                logger.info(f"SQL analysis completed for user {state['user_id']}")
             else:
                 state["error_message"] = result.get("error", "SQL analysis failed")
 
@@ -172,7 +170,8 @@ class FinancialWorkflow:
             response_stream = self.grok_service.generate_response(
                 context=response_context,
                 system_prompt=state["system_prompt"],
-                stream=True
+                stream=True,
+                use_cache=True
             )
 
             response_chunks = []
@@ -188,29 +187,40 @@ class FinancialWorkflow:
                 "tokens_used": state.get("tokens_used", 0) + len(full_response.split())
             })
 
-            # Save conversation (non-blocking)
-            try:
-                asyncio.create_task(self.context_service.save_conversation(
-                    user_id=state["user_id"],
-                    question=state["user_question"],
-                    response=full_response,
-                    analysis_data=state["sql_analysis"]
-                ))
-            except Exception as e:
-                logger.warning(f"Could not save conversation: {e}")
+            # Save conversation asynchronously
+            asyncio.create_task(self._save_conversation_async(
+                user_id=state["user_id"],
+                question=state["user_question"],
+                response=full_response,
+                analysis_data=state["sql_analysis"]
+            ))
 
             logger.info(f"Response generated with {len(response_chunks)} chunks")
         except Exception as e:
             logger.error(f"Response generation error: {e}")
             state["error_message"] = f"Response generation failed: {str(e)}"
+            state["final_response"] = "Xin lỗi, có lỗi trong quá trình tạo phản hồi."
 
         return state
+
+    async def _save_conversation_async(self, user_id: str, question: str, response: str, analysis_data: Dict):
+        """Save conversation asynchronously without blocking"""
+        try:
+            await self.context_service.save_conversation(
+                user_id=user_id,
+                question=question,
+                response=response,
+                analysis_data=analysis_data
+            )
+        except Exception as e:
+            logger.warning(f"Could not save conversation: {e}")
 
     async def _handle_error_minimal(self, state: FinancialState) -> FinancialState:
         """Minimal error handling"""
         error_msg = state.get("error_message", "Unknown error")
+        logger.error(f"Workflow error for user {state.get('user_id', 'unknown')}: {error_msg}")
 
-        state["final_response"] = f"Xin lỗi, có lỗi xảy ra: {error_msg}\nVui lòng thử lại."
+        state["final_response"] = f"Xin lỗi, có lỗi xảy ra khi xử lý yêu cầu của bạn. Vui lòng thử lại sau."
 
         return state
 
@@ -226,17 +236,15 @@ class FinancialWorkflow:
 
     def _get_cached_system_prompt(self, user_id: str) -> str:
         """Get cached system prompt or generate new one"""
-        if user_id in self._prompt_cache:
-            return self._prompt_cache[user_id]
-
-        return self._generate_system_prompt({})
+        return self._prompt_cache.get(user_id, self._generate_system_prompt({}))
 
     def _generate_system_prompt(self, user_context: Dict[str, Any]) -> str:
         """Generate minimal, efficient system prompt"""
-        base_prompt = """Chuyên gia tài chính AI - Phân tích dữ liệu thực, trả lời tiếng Việt, không bịa đặt."""
+        base_prompt = "Chuyên gia tài chính AI - Phân tích dữ liệu thực, trả lời tiếng Việt, không bịa đặt."
 
         if user_context.get('monthly_income'):
             base_prompt += f" Thu nhập: {user_context['monthly_income']:,}VND."
+        
         if user_context.get('financial_goals'):
             goals = user_context['financial_goals']
             if isinstance(goals, list) and goals:
@@ -244,24 +252,41 @@ class FinancialWorkflow:
 
         return base_prompt
 
-# Initialize workflow safely
-try:
-    workflow = FinancialWorkflow()
-    logger.info("✅ Financial workflow initialized successfully")
-except Exception as e:
-    logger.error(f"❌ Error initializing workflow: {e}")
-    workflow = None
+    def clear_cache(self):
+        """Clear internal caches"""
+        self._prompt_cache.clear()
+        self._context_cache.clear()
+        logger.info("Workflow caches cleared")
+
+# Initialize workflow with better error handling
+workflow = None
+
+def get_workflow():
+    """Get workflow instance with lazy initialization"""
+    global workflow
+    if workflow is None:
+        try:
+            workflow = FinancialWorkflow()
+            logger.info("✅ Financial workflow initialized successfully")
+        except Exception as e:
+            logger.error(f"❌ Error initializing workflow: {e}")
+            raise
+    return workflow
 
 async def analyze_financial(user_id: str, question: str) -> Dict[str, Any]:
     """Optimized financial analysis entry point"""
-    if not workflow:
+    try:
+        workflow_instance = get_workflow()
+    except Exception as e:
         return {
             "response": "Xin lỗi, hệ thống chưa sẵn sàng. Vui lòng thử lại sau.",
             "analysis": {},
-            "success": False
+            "success": False,
+            "error": str(e)
         }
 
-    config = {"configurable": {"thread_id": f"opt_{user_id}"}}
+    # Use a simpler config without thread_id complications
+    config = {"configurable": {"thread_id": f"user_{user_id}_{hash(question) % 10000}"}}
 
     initial_state = {
         "user_id": user_id,
@@ -279,7 +304,7 @@ async def analyze_financial(user_id: str, question: str) -> Dict[str, Any]:
     }
 
     try:
-        result = await workflow.app.ainvoke(initial_state, config)
+        result = await workflow_instance.app.ainvoke(initial_state, config)
 
         return {
             "response": result["final_response"],
@@ -297,5 +322,6 @@ async def analyze_financial(user_id: str, question: str) -> Dict[str, Any]:
             "response": f"Xin lỗi, có lỗi trong quá trình xử lý: {str(e)}",
             "analysis": {},
             "optimization_stats": {},
-            "success": False
+            "success": False,
+            "error": str(e)
         }

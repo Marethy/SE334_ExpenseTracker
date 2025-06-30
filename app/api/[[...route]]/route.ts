@@ -1,10 +1,11 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 import { Hono } from "hono";
 import { handle } from "hono/vercel";
 
 import { clerk } from "./clerk-config";
 
+import ai from "./ai";
 import summary from "./summary";
 import accounts from "./accounts";
 import categories from "./categories";
@@ -15,10 +16,10 @@ export const runtime = "nodejs";
 
 const app = new Hono().basePath("/api");
 
-// Apply clerk middleware globally
 app.use("*", clerk);
 
 const routes = app
+  .route("/ai", ai)
   .route("/summary", summary)
   .route("/accounts", accounts)
   .route("/categories", categories)
