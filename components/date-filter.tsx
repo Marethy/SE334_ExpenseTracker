@@ -3,7 +3,7 @@
 
 import qs from "query-string";
 import { useState, useEffect } from "react";
-import { format, subDays } from "date-fns";
+import { format, subDays, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { ChevronDown } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -56,10 +56,18 @@ export const DateFilter = () => {
         url: pathName,
         query,
       },
-      { skipEmptyString: true, skipNull: true }
+      { skipEmptyString: true, skipNull: true },
     );
 
     router.push(url);
+  };
+
+  const applyPreset = (preset: "this" | "last") => {
+    const now = new Date();
+    const base = preset === "this" ? now : subMonths(now, 1);
+    const range = { from: startOfMonth(base), to: endOfMonth(base) };
+    setDate(range);
+    pushToUrl(range);
   };
 
   const onReset = () => {
@@ -97,6 +105,22 @@ export const DateFilter = () => {
       </PopoverTrigger>
 
       <PopoverContent className="lg:w-auto w-full p-0" align="start">
+        <div className="p-4 w-full flex gap-x-2">
+          <Button
+            className="w-full"
+            variant="outline"
+            onClick={() => applyPreset("this")}
+          >
+            This month
+          </Button>
+          <Button
+            className="w-full"
+            variant="outline"
+            onClick={() => applyPreset("last")}
+          >
+            Last month
+          </Button>
+        </div>
         <Calendar
           disabled={false}
           initialFocus
