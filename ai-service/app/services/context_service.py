@@ -2,7 +2,7 @@ import json
 from datetime import datetime, timedelta
 from typing import Dict, List, Any
 from sqlalchemy import text
-from ..database import db_service
+from app.database.database import db_service
 import logging
 
 logger = logging.getLogger(__name__)
@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 class ContextService:
     def __init__(self):
         self.db_service = db_service
+        self._table_created = False
 
     async def save_conversation(
         self,
@@ -18,8 +19,12 @@ class ContextService:
         response: str,
         analysis_data: Dict[str, Any] = None
     ):
-        """Save conversation to database"""
+        """Save conversation to database with auto table creation"""
         try:
+            if not self._table_created:
+                await self._ensure_conversation_table_exists()
+                self._table_created = True
+
             query = text("""
                 INSERT INTO conversation_history (
                     user_id, question, response, analysis_data, created_at
@@ -28,13 +33,15 @@ class ContextService:
                 )
             """)
 
-            await self._execute_query(query, {
-                "user_id": user_id,
-                "question": question,
-                "response": response,
-                "analysis_data": json.dumps(analysis_data) if analysis_data else None,
-                "created_at": datetime.now()
-            })
+            with self.db_service.engine.connect() as conn:
+                conn.execute(query, {
+                    "user_id": user_id,
+                    "question": question,
+                    "response": response,
+                    "analysis_data": json.dumps(analysis_data) if analysis_data else None,
+                    "created_at": datetime.now()
+                })
+                conn.commit()
 
             logger.info(f"Saved conversation for user {user_id}")
         except Exception as e:
@@ -43,7 +50,9 @@ class ContextService:
     async def get_conversation_history(self, user_id: str, limit: int = 10) -> List[Dict[str, Any]]:
         """Get conversation history for user"""
         try:
-            await self._ensure_conversation_table_exists()
+            if not self._table_created:
+                await self._ensure_conversation_table_exists()
+                self._table_created = True
 
             query = text("""
                 SELECT question, response, analysis_data, created_at
@@ -53,22 +62,23 @@ class ContextService:
                 LIMIT :limit
             """)
 
-            result = await self._execute_query(query, {
-                "user_id": user_id,
-                "limit": limit
-            })
+            with self.db_service.engine.connect() as conn:
+                result = conn.execute(query, {
+                    "user_id": user_id,
+                    "limit": limit
+                })
 
-            conversations = []
-            for row in result:
-                conv = {
-                    "question": row[0],
-                    "response": row[1],
-                    "analysis_data": json.loads(row[2]) if row[2] else None,
-                    "created_at": row[3].isoformat() if row[3] else None
-                }
-                conversations.append(conv)
+                conversations = []
+                for row in result:
+                    conv = {
+                        "question": row[0],
+                        "response": row[1],
+                        "analysis_data": json.loads(row[2]) if row[2] else None,
+                        "created_at": row[3].isoformat() if row[3] else None
+                    }
+                    conversations.append(conv)
 
-            return conversations
+                return conversations
         except Exception as e:
             logger.error(f"Error getting conversation history: {e}")
             return []
@@ -125,12 +135,17 @@ class ContextService:
                     question TEXT NOT NULL,
                     response TEXT NOT NULL,
                     analysis_data JSONB,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    INDEX idx_user_created (user_id, created_at DESC)
-                )
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE INDEX IF NOT EXISTS idx_conversation_user_created
+                ON conversation_history (user_id, created_at DESC);
             """)
 
-            await self._execute_query(create_table_query)
+            with self.db_service.engine.connect() as conn:
+                conn.execute(create_table_query)
+                conn.commit()
+
+            logger.info("✅ conversation_history table ensured")
         except Exception as e:
             logger.error(f"Error creating conversation table: {e}")
 

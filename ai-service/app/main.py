@@ -4,10 +4,12 @@ from dotenv import load_dotenv
 load_dotenv()
 load_dotenv('.env.local')
 
-
+# Disable telemetry
 os.environ["ANONYMIZED_TELEMETRY"] = "False"
 os.environ["CHROMA_TELEMETRY"] = "False"
 os.environ["DO_NOT_TRACK"] = "1"
+os.environ["SCARF_NO_ANALYTICS"] = "true"
+os.environ["CHROMA_NO_TELEMETRY"] = "1"
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
@@ -21,31 +23,41 @@ from contextlib import asynccontextmanager
 from app.workflows.financial_analysis import analyze_financial
 from app.services.grok_service import grok_service
 from app.services.context_service import ContextService
-from app.embeddings import embeddings_service
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Optimized startup and shutdown"""
-    logger.info("🚀 Starting Optimized AI Financial Service")
+    """Startup and shutdown with migrations"""
+    logger.info("🚀 Starting AI Financial Service")
 
+    # Run database migrations
     try:
-        await embeddings_service.embed_text("test")
-        logger.info("✅ Embeddings service warmed up")
+        from app.database.migrations import run_migrations
+        run_migrations()
+        logger.info("✅ Database migrations completed")
+    except Exception as e:
+        logger.warning(f"⚠️ Migration warning: {e}")
+
+    # Warmup services
+    try:
+        from app.embeddings import embeddings_service
+        if embeddings_service:
+            await embeddings_service.embed_text("test")
+            logger.info("✅ Embeddings service warmed up")
     except Exception as e:
         logger.warning(f"Embeddings warmup failed: {e}")
 
     yield
 
     grok_service.clear_cache()
-    logger.info("🛑 Optimized AI Service shutdown complete")
+    logger.info("🛑 AI Service shutdown complete")
 
 app = FastAPI(
-    title="Optimized AI Financial Analysis Service",
-    description="High-performance financial analysis with minimal token usage",
-    version="2.0.0",
+    title="AI Financial Analysis Service",
+    description="Advanced financial analysis with AI",
+    version="2.1.0",
     lifespan=lifespan
 )
 

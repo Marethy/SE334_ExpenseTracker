@@ -1,16 +1,16 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Loader2, Brain, TrendingUp, BarChart3 } from "lucide-react";
+import { Send, Loader2, Brain, TrendingUp, Copy, Check } from "lucide-react";
 import { useAIAnalysis } from "@/features/ai/api/use-ai-analysis";
 import { usePaywall } from "@/features/subscriptions/hooks/use-paywall";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import { Markdown } from "@/components/ui/markdown";
 
 interface ChatMessage {
   id: string;
@@ -27,6 +27,36 @@ const SAMPLE_QUESTIONS = [
   "Đề xuất cách cải thiện tài chính cá nhân",
   "Danh mục nào tôi chi tiêu nhiều nhất?",
 ];
+
+// Copy button component
+const CopyButton = ({ text }: { text: string }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy text:", err);
+    }
+  };
+
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={handleCopy}
+      className="h-6 w-6 p-0 hover:bg-gray-200"
+    >
+      {copied ? (
+        <Check className="size-3 text-green-600" />
+      ) : (
+        <Copy className="size-3" />
+      )}
+    </Button>
+  );
+};
 
 export const AIChat = () => {
   const [question, setQuestion] = useState("");
@@ -53,7 +83,7 @@ export const AIChat = () => {
       const errorMessage: ChatMessage = {
         id: Date.now().toString(),
         type: "ai",
-        content: `Xin lỗi, có lỗi xảy ra: ${error}`,
+        content: `❌ **Xin lỗi, có lỗi xảy ra:**\n\n\`${error}\`\n\nVui lòng thử lại sau.`,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -152,7 +182,7 @@ export const AIChat = () => {
                   size="sm"
                   onClick={() => handleSampleQuestion(sampleQ)}
                   disabled={isLoading}
-                  className="text-xs"
+                  className="text-xs hover:bg-blue-50 hover:border-blue-200"
                 >
                   {sampleQ}
                 </Button>
@@ -203,18 +233,34 @@ export const AIChat = () => {
                 }`}
               >
                 <div
-                  className={`max-w-[80%] rounded-lg p-4 ${
+                  className={`max-w-[85%] rounded-lg ${
                     message.type === "user"
-                      ? "bg-blue-500 text-white"
-                      : "bg-gray-100 text-gray-900"
+                      ? "bg-blue-500 text-white p-4"
+                      : "bg-white border border-gray-200 shadow-sm"
                   }`}
                 >
-                  <p className="whitespace-pre-wrap">{message.content}</p>
+                  {message.type === "user" ? (
+                    <p className="whitespace-pre-wrap">{message.content}</p>
+                  ) : (
+                    <div className="relative group">
+                      {/* Copy button for AI messages */}
+                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <CopyButton text={message.content} />
+                      </div>
+
+                      <div className="p-4">
+                        <Markdown className="text-gray-900">
+                          {message.content}
+                        </Markdown>
+                      </div>
+                    </div>
+                  )}
+
                   <p
                     className={`text-xs mt-2 ${
                       message.type === "user"
                         ? "text-blue-100"
-                        : "text-gray-500"
+                        : "text-gray-500 px-4 pb-2"
                     }`}
                   >
                     {message.timestamp.toLocaleTimeString("vi-VN", {
@@ -229,14 +275,21 @@ export const AIChat = () => {
             {/* Current AI Response */}
             {currentResponse && (
               <div className="flex justify-start">
-                <div className="max-w-[80%] rounded-lg p-4 bg-gray-100 text-gray-900">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Loader2 className="size-4 animate-spin" />
-                    <Badge variant="secondary" className="text-xs">
-                      Đang phân tích...
-                    </Badge>
+                <div className="max-w-[85%] rounded-lg bg-white border border-gray-200 shadow-sm">
+                  <div className="p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Loader2 className="size-4 animate-spin text-blue-500" />
+                      <Badge
+                        variant="secondary"
+                        className="text-xs bg-blue-50 text-blue-700"
+                      >
+                        Đang phân tích...
+                      </Badge>
+                    </div>
+                    <Markdown className="text-gray-900">
+                      {currentResponse}
+                    </Markdown>
                   </div>
-                  <p className="whitespace-pre-wrap">{currentResponse}</p>
                 </div>
               </div>
             )}
@@ -280,7 +333,8 @@ export const AIChat = () => {
           </form>
 
           <p className="text-xs text-muted-foreground text-center">
-            Nhấn Enter để gửi, Shift+Enter để xuống dòng
+            Nhấn Enter để gửi, Shift+Enter để xuống dòng • Hỗ trợ Markdown
+            formatting
           </p>
         </CardContent>
       </Card>
