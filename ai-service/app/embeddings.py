@@ -6,6 +6,10 @@ import numpy as np
 from typing import List, Dict, Any
 import asyncio
 
+os.environ["ANONYMIZED_TELEMETRY"] = "False"
+os.environ["CHROMA_TELEMETRY_ANONYMOUS"] = "False"
+os.environ["CHROMA_TELEMETRY"] = "False"
+
 class VietnameseEmbeddings:
     def __init__(self):
         print("🔄 Loading Vietnamese embedding model...")
@@ -24,16 +28,19 @@ class VietnameseEmbeddings:
             print(f"❌ Error loading dangvantuan/vietnamese-embedding: {e}")
             exit()
 
-        # Load Chroma with new API - FIX HERE
         try:
+            chroma_settings = chromadb.config.Settings(
+                anonymized_telemetry=False,
+                allow_reset=True
+            )
             self.chroma_client = chromadb.PersistentClient(
-                path="./chroma_db"
+                path="./chroma_db",
+                settings=chroma_settings
             )
             print("✅ ChromaDB client initialized successfully")
         except Exception as e:
             print(f"❌ Error initializing ChromaDB: {e}")
-            # Fallback to in-memory client
-            self.chroma_client = chromadb.Client()
+            self.chroma_client = chromadb.Client(settings=chroma_settings)
             print("⚠️  Using in-memory ChromaDB client")
 
         # Collection for user contexts
