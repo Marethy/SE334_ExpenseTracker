@@ -20,7 +20,8 @@ class VietnameseEmbeddings:
         try:
             self.model = SentenceTransformer(
                 'dangvantuan/vietnamese-embedding',
-                device=device
+                device=device,
+                token=os.getenv('HF_TOKEN')
             )
             print("✅ Vietnamese embedding model loaded successfully")
         except Exception as e:
@@ -129,7 +130,7 @@ class VietnameseEmbeddings:
         except Exception as e:
             print(f"Error storing user context: {e}")
 
-    def _create_context_text(self, user_id: str, context: Dict[str. Any]) -> str:
+    def _create_context_text(self, user_id: str, context: Dict[str, Any]) -> str:
         """Create rich Vietnamese context text for embedding"""
 
         # Build comprehensive context description
