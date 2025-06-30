@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { z } from "zod";
 import { and, eq, inArray } from "drizzle-orm";
 import { Hono } from "hono";

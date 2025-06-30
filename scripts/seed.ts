@@ -24,7 +24,7 @@ const pool = new pg.Pool({
 
 const db = drizzle(pool);
 
-const YOUR_USER_ID = "user_2z9DHMW3UKpwza1orMSp2eYZWyK";
+const YOUR_USER_ID = "user_2z3M1m8d5vG8C2BGu4V795g0zCR";
 
 const accountSeed = [
   { id: createId(), name: "Tài khoản Vietcombank", userId: YOUR_USER_ID },
@@ -131,7 +131,7 @@ const createTransactionSeed = () => {
         "Chợ Bến Thành",
       ],
       category: "Sinh hoạt phẩm",
-      amountRange: [100000, 2000000], // 100k-2M VND
+      amountRange: [100000, 2000000], 
     },
     {
       payees: [

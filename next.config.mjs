@@ -14,6 +14,9 @@ const nextConfig = {
     ignoreDuringBuilds: false,
   },
 
+  // Đảm bảo build standalone cho Vercel/Node.js
+  output: 'standalone',
+
   // Handle well-known routes
   async rewrites() {
     return [
