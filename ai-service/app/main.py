@@ -1,9 +1,18 @@
-# ai-service/app/main.py
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+load_dotenv('.env.local')
+
+
+os.environ["ANONYMIZED_TELEMETRY"] = "False"
+os.environ["CHROMA_TELEMETRY"] = "False"
+os.environ["DO_NOT_TRACK"] = "1"
+
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Dict, Any, Optional
 import asyncio
 import json
 import logging
@@ -13,7 +22,6 @@ from app.workflows.financial_analysis import analyze_financial
 from app.services.grok_service import grok_service
 from app.services.context_service import ContextService
 from app.embeddings import embeddings_service
-from app.models import ChatMessage, UserContext, AIResponse
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

@@ -1,14 +1,10 @@
+import os
 from sentence_transformers import SentenceTransformer
 import chromadb
-from chromadb.config import Settings
-import os
-import json
 import torch
 import numpy as np
-from textwrap import dedent
 from typing import List, Dict, Any
 import asyncio
-
 
 class VietnameseEmbeddings:
     def __init__(self):
@@ -28,29 +24,41 @@ class VietnameseEmbeddings:
             print(f"❌ Error loading dangvantuan/vietnamese-embedding: {e}")
             exit()
 
-        # Load Chroma to store embeddings
-        self.chroma_client = chromadb.Client(
-            Settings(
-                chroma_db_impl="duckdb+parquet",
-                persist_directory="./chroma_db"
+        # Load Chroma with new API - FIX HERE
+        try:
+            self.chroma_client = chromadb.PersistentClient(
+                path="./chroma_db"
             )
-        )
+            print("✅ ChromaDB client initialized successfully")
+        except Exception as e:
+            print(f"❌ Error initializing ChromaDB: {e}")
+            # Fallback to in-memory client
+            self.chroma_client = chromadb.Client()
+            print("⚠️  Using in-memory ChromaDB client")
 
         # Collection for user contexts
-        self.user_contexts = self.chroma_client.get_or_create_collection(
-            name="user_contexts",
-            metadata={
-                "description": "User financial contexts and preferences"
-            }
-        )
+        try:
+            self.user_contexts = self.chroma_client.get_or_create_collection(
+                name="user_contexts",
+                metadata={
+                    "description": "User financial contexts and preferences"
+                }
+            )
+        except Exception as e:
+            print(f"❌ Error creating user_contexts collection: {e}")
+            self.user_contexts = None
 
         # Collection for financial patterns
-        self.financial_patterns = self.chroma_client.get_or_create_collection(
-            name="financial_patterns",
-            metadata={
-                "description": "Common financial patterns and insights"
-            }
-        )
+        try:
+            self.financial_patterns = self.chroma_client.get_or_create_collection(
+                name="financial_patterns",
+                metadata={
+                    "description": "Common financial patterns and insights"
+                }
+            )
+        except Exception as e:
+            print(f"❌ Error creating financial_patterns collection: {e}")
+            self.financial_patterns = None
 
     async def embed_text(self, text: str) -> List[float]:
         """Generate embedding for text"""
@@ -79,7 +87,7 @@ class VietnameseEmbeddings:
             convert_to_numpy=True,
             normalize_embeddings=True,
             show_progress_bar=False
-        )
+        )[0]  # Return first (and only) embedding
 
     def _preprocess_vietnamese_text(self, text: str) -> str:
         """Preprocess Vietnamese text for better embedding"""
@@ -98,18 +106,31 @@ class VietnameseEmbeddings:
 
     def _tokenize_vietnamese_text(self, text: str) -> str:
         """Tokenize Vietnamese text for better embedding"""
-        from pyvi.ViTokenizer import tokenize
-
-        # Tokenize text
-        return tokenize(text)
+        try:
+            from pyvi.ViTokenizer import tokenize
+            return tokenize(text)
+        except ImportError:
+            print("⚠️  pyvi not installed, skipping Vietnamese tokenization")
+            return text
+        except Exception as e:
+            print(f"⚠️  Error tokenizing text: {e}")
+            return text
 
     async def store_user_context(self, user_id: str, context: Dict[str, Any]):
         """Store user context with embedding"""
+        if not self.user_contexts:
+            print("⚠️  User contexts collection not available")
+            return
+
         # Create rich context text in Vietnamese
         context_text = self._create_context_text(user_id, context)
 
         # Generate embedding
-        embedding = await self.embed_text(context_text)
+        try:
+            embedding = await self.embed_text(context_text)
+        except Exception as e:
+            print(f"❌ Error generating embedding: {e}")
+            return
 
         # Store with metadata
         metadata = {
@@ -119,16 +140,24 @@ class VietnameseEmbeddings:
             "context_type": "user_profile"
         }
 
+        # Convert non-string values to strings for ChromaDB
+        clean_metadata = {}
+        for k, v in metadata.items():
+            if isinstance(v, (str, int, float, bool)):
+                clean_metadata[k] = v
+            else:
+                clean_metadata[k] = str(v)
+
         try:
             self.user_contexts.upsert(
                 ids=[user_id],
                 embeddings=[embedding],
-                metadatas=[metadata],
+                metadatas=[clean_metadata],
                 documents=[context_text]
             )
             print(f"✅ Stored context for user {user_id}")
         except Exception as e:
-            print(f"Error storing user context: {e}")
+            print(f"❌ Error storing user context: {e}")
 
     def _create_context_text(self, user_id: str, context: Dict[str, Any]) -> str:
         """Create rich Vietnamese context text for embedding"""
@@ -144,7 +173,7 @@ class VietnameseEmbeddings:
 
         # Financial goals
         if context.get('financial_goals'):
-            goals_text = ', '.join(context['financial_goals'])
+            goals_text = ', '.join(context['financial_goals']) if isinstance(context['financial_goals'], list) else str(context['financial_goals'])
             context_parts.append(f"Mục tiêu tài chính: {goals_text}")
 
         # Risk tolerance
@@ -168,24 +197,13 @@ class VietnameseEmbeddings:
                 if pref_items:
                     context_parts.append(f"Ưu tiên chi tiêu: {', '.join(pref_items)}")
 
-        # Conversation patterns
-        if context.get('conversation_history'):
-            recent_intents = []
-            for conv in context['conversation_history'][-3:]:
-                if conv.get('intent'):
-                    recent_intents.append(conv['intent'])
-            if recent_intents:
-                context_parts.append(f"Quan tâm gần đây: {', '.join(set(recent_intents))}")
-
-        if context.get('financial_habits'):
-            habits = context['financial_habits']
-            if isinstance(habits, list):
-                context_parts.append(f"Thói quen tài chính: {', '.join(habits)}")
-
         return ' | '.join(context_parts)
 
     async def get_user_context(self, user_id: str) -> Dict[str, Any]:
         """Retrieve user context"""
+        if not self.user_contexts:
+            return {}
+
         try:
             results = self.user_contexts.get(ids=[user_id])
             if results['metadatas'] and len(results['metadatas']) > 0:
@@ -194,18 +212,25 @@ class VietnameseEmbeddings:
                 context = {k: v for k, v in metadata.items() if k not in ['user_id', 'created_at', 'context_type']}
                 return context
         except Exception as e:
-            print(f"Error retrieving user context: {e}")
+            print(f"❌ Error retrieving user context: {e}")
         return {}
 
     async def find_similar_patterns(self, query: str, user_id: str = None, n_results: int = 3) -> List[Dict]:
         """Find similar financial patterns with Vietnamese semantic search"""
+        if not self.financial_patterns:
+            return []
+
         # Enhance query for Vietnamese context
         enhanced_query = f"Tình huống tài chính: {query}"
 
         if user_id:
             enhanced_query += f" (người dùng {user_id})"
 
-        embedding = await self.embed_text(enhanced_query)
+        try:
+            embedding = await self.embed_text(enhanced_query)
+        except Exception as e:
+            print(f"❌ Error generating embedding for query: {e}")
+            return []
 
         try:
             # Search in financial patterns
@@ -231,17 +256,25 @@ class VietnameseEmbeddings:
 
             return patterns
         except Exception as e:
-            print(f"Error finding similar patterns: {e}")
+            print(f"❌ Error finding similar patterns: {e}")
             return []
 
     def get_model_info(self) -> Dict[str, Any]:
         """Get information about the loaded model"""
-        return {
-            "model_name": getattr(self.model, 'model_name', 'dangvantuan/vietnamese-embedding'),
-            "max_seq_length": getattr(self.model, 'max_seq_length', 512),
-            "embedding_dimension": getattr(self.model, 'get_sentence_embedding_dimension', lambda: 384)(),
-            "device": str(self.model.device) if hasattr(self.model, 'device') else 'unknown'
-        }
+        try:
+            return {
+                "model_name": getattr(self.model, 'model_name', 'dangvantuan/vietnamese-embedding'),
+                "max_seq_length": getattr(self.model, 'max_seq_length', 512),
+                "embedding_dimension": getattr(self.model, 'get_sentence_embedding_dimension', lambda: 384)(),
+                "device": str(self.model.device) if hasattr(self.model, 'device') else 'unknown',
+                "chroma_status": "available" if self.chroma_client else "unavailable"
+            }
+        except Exception as e:
+            return {"error": str(e)}
 
 
-embeddings_service = VietnameseEmbeddings()
+try:
+    embeddings_service = VietnameseEmbeddings()
+except Exception as e:
+    print(f"❌ Error initializing embeddings service: {e}")
+    embeddings_service = None

@@ -156,7 +156,7 @@ sql_agent = None
 def get_sql_agent() -> FinancialSQLAgent:
     global sql_agent
     if sql_agent is None:
-        api_key = os.get("XAI_API_KEY")
+        api_key = os.getenv("XAI_API_KEY")
         if not api_key:
             raise ValueError("XAI_API_KEY environment variable is required")
         sql_agent = FinancialSQLAgent(api_key=api_key)

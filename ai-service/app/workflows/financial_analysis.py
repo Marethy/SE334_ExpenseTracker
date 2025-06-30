@@ -23,7 +23,7 @@ class FinancialState(TypedDict):
     context_loaded: bool
 
     # Analysis results
-    sql_analysis: Dict[str, Any]
+    sql_analysis: Dict[str, Any]  # State key
     similar_patterns: List[Dict]
 
     # Response generation
@@ -57,33 +57,34 @@ class FinancialWorkflow:
         """Create optimized workflow with minimal state transitions"""
         workflow = StateGraph(FinancialState)
 
-        workflow.add_node("load_context_cached", self._load_context_cached)
-        workflow.add_node("sql_analysis", self._sql_analysis)
-        workflow.add_node("generate_response_streaming", self._generate_response_streaming)
-        workflow.add_node("handle_error_minimal", self._handle_error_minimal)
+        # Đổi tên nodes để tránh conflict với state keys
+        workflow.add_node("load_context_step", self._load_context_cached)
+        workflow.add_node("execute_sql_step", self._sql_analysis)  # Đổi từ "sql_analysis"
+        workflow.add_node("generate_response_step", self._generate_response_streaming)
+        workflow.add_node("handle_error_step", self._handle_error_minimal)
 
-        workflow.set_entry_point("load_context_cached")
+        workflow.set_entry_point("load_context_step")
 
         workflow.add_conditional_edges(
-            "load_context_cached",
+            "load_context_step",
             self._check_context_loaded,
             {
-                "loaded": "sql_analysis",
-                "error": "handle_error_minimal"
+                "loaded": "execute_sql_step",
+                "error": "handle_error_step"
             }
         )
 
         workflow.add_conditional_edges(
-            "sql_analysis",
+            "execute_sql_step",
             self._check_analysis_success,
             {
-                "success": "generate_response_streaming",
-                "error": "handle_error_minimal"
+                "success": "generate_response_step",
+                "error": "handle_error_step"
             }
         )
 
-        workflow.add_edge("generate_response_streaming", END)
-        workflow.add_edge("handle_error_minimal", END)
+        workflow.add_edge("generate_response_step", END)
+        workflow.add_edge("handle_error_step", END)
 
         return workflow
 
@@ -91,7 +92,6 @@ class FinancialWorkflow:
         """Load context with caching to avoid repeated API calls"""
         try:
             user_id = state["user_id"]
-
 
             if user_id in self._context_cache:
                 cached_time = self._context_cache[user_id].get("timestamp", 0)
@@ -104,7 +104,15 @@ class FinancialWorkflow:
                     })
                     return state
 
-            user_context = await embeddings_service.get_user_context(user_id)
+            # Safely get user context
+            try:
+                if embeddings_service:
+                    user_context = await embeddings_service.get_user_context(user_id)
+                else:
+                    user_context = {}
+            except Exception as e:
+                logger.warning(f"Embeddings service error: {e}")
+                user_context = {}
 
             self._context_cache[user_id] = {
                 "data": user_context,
@@ -161,7 +169,7 @@ class FinancialWorkflow:
                 "user_preferences": state["user_context"]
             }
 
-            response_stream = await self.grok_service.generate_response(
+            response_stream = self.grok_service.generate_response(
                 context=response_context,
                 system_prompt=state["system_prompt"],
                 stream=True
@@ -180,12 +188,16 @@ class FinancialWorkflow:
                 "tokens_used": state.get("tokens_used", 0) + len(full_response.split())
             })
 
-            asyncio.create_task(self.context_service.save_conversation(
-                user_id=state["user_id"],
-                question=state["user_question"],
-                response=full_response,
-                analysis_data=state["sql_analysis"]
-            ))
+            # Save conversation (non-blocking)
+            try:
+                asyncio.create_task(self.context_service.save_conversation(
+                    user_id=state["user_id"],
+                    question=state["user_question"],
+                    response=full_response,
+                    analysis_data=state["sql_analysis"]
+                ))
+            except Exception as e:
+                logger.warning(f"Could not save conversation: {e}")
 
             logger.info(f"Response generated with {len(response_chunks)} chunks")
         except Exception as e:
@@ -226,14 +238,29 @@ class FinancialWorkflow:
         if user_context.get('monthly_income'):
             base_prompt += f" Thu nhập: {user_context['monthly_income']:,}VND."
         if user_context.get('financial_goals'):
-            base_prompt += f" Mục tiêu: {user_context['financial_goals'][0]}."
+            goals = user_context['financial_goals']
+            if isinstance(goals, list) and goals:
+                base_prompt += f" Mục tiêu: {goals[0]}."
 
         return base_prompt
 
-workflow = FinancialWorkflow()
+# Initialize workflow safely
+try:
+    workflow = FinancialWorkflow()
+    logger.info("✅ Financial workflow initialized successfully")
+except Exception as e:
+    logger.error(f"❌ Error initializing workflow: {e}")
+    workflow = None
 
 async def analyze_financial(user_id: str, question: str) -> Dict[str, Any]:
     """Optimized financial analysis entry point"""
+    if not workflow:
+        return {
+            "response": "Xin lỗi, hệ thống chưa sẵn sàng. Vui lòng thử lại sau.",
+            "analysis": {},
+            "success": False
+        }
+
     config = {"configurable": {"thread_id": f"opt_{user_id}"}}
 
     initial_state = {
@@ -251,15 +278,24 @@ async def analyze_financial(user_id: str, question: str) -> Dict[str, Any]:
         "error_message": None
     }
 
-    result = await workflow.app.ainvoke(initial_state, config)
+    try:
+        result = await workflow.app.ainvoke(initial_state, config)
 
-    return {
-        "response": result["final_response"],
-        "analysis": result["sql_analysis"],
-        "optimization_stats": {
-            "tokens_used": result["tokens_used"],
-            "cache_hits": result["cache_hits"],
-            "response_chunks": len(result["response_chunks"])
-        },
-        "success": not bool(result.get("error_message"))
-    }
+        return {
+            "response": result["final_response"],
+            "analysis": result["sql_analysis"],
+            "optimization_stats": {
+                "tokens_used": result["tokens_used"],
+                "cache_hits": result["cache_hits"],
+                "response_chunks": len(result["response_chunks"])
+            },
+            "success": not bool(result.get("error_message"))
+        }
+    except Exception as e:
+        logger.error(f"Workflow execution error: {e}")
+        return {
+            "response": f"Xin lỗi, có lỗi trong quá trình xử lý: {str(e)}",
+            "analysis": {},
+            "optimization_stats": {},
+            "success": False
+        }
