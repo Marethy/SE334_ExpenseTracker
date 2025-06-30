@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { format, parse } from 'date-fns';
+import { format, parse, parseISO, isValid } from 'date-fns';
 
 import { ImportTable } from './import-table';
 import { convertAmountToMilliUnits } from '@/lib/utils';
@@ -94,11 +94,30 @@ export const ImportCard = ({ data, onCancel, onSubmit }: Props) => {
       }, {});
     });
 
-    const formattedData = arrayOfData.map((item) => ({
-      ...item,
-      amount: convertAmountToMilliUnits(parseFloat(item.amount)),
-      date: format(parse(item.date, dateFormat, new Date()), outputFormat),
-    }));
+    const formattedData = arrayOfData.map((item) => {
+      let dateObj: Date;
+
+      if (typeof item.date === 'string') {
+        dateObj = item.date.includes('T')
+          ? parseISO(item.date)
+          : parse(item.date, dateFormat, new Date());
+      } else if (item.date instanceof Date) {
+        dateObj = item.date;
+      } else {
+        dateObj = new Date(item.date);
+      }
+
+      if (!isValid(dateObj)) {
+        console.error('Invalid date:', item.date);
+        throw new Error(`Cannot parse date: ${item.date}`);
+      }
+
+      return {
+        ...item,
+        amount: convertAmountToMilliUnits(parseFloat(item.amount)),
+        date: format(dateObj, outputFormat),
+      };
+    });
 
     onSubmit(formattedData);
   };
