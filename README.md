@@ -20,6 +20,7 @@ A full-stack personal finance management application built with React (frontend)
 - Track income and expenses
 - View transaction history
 - Visualize income vs. expenses with interactive charts
+- Export charts as PNG or PDF
 - Add, edit, and delete transactions
 - Unit tests for both backend and frontend components
 
@@ -96,6 +97,7 @@ A full-stack personal finance management application built with React (frontend)
 1. Launch backend and frontend as described above.
 2. Open `http://localhost:3000` in your browser.
 3. Add income or expense transactions, view history, and analyze charts.
+4. Use the export button on each chart to download it as PNG or PDF.
 
 ## Conventions
 See [`CONVENTIONS.md`](CONVENTIONS.md) for coding style, branch naming, and commit message guidelines.
