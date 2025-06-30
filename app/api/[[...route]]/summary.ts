@@ -22,11 +22,13 @@ const app = new Hono().get(
       from: z.string().optional(),
       to: z.string().optional(),
       accountId: z.string().optional(),
+      sort: z.enum(["amount", "count"]).optional(),
+      limit: z.coerce.number().optional(),
     })
   ),
   async (c) => {
     const auth = getAuth(c);
-    const { from, to, accountId } = c.req.valid("query");
+    const { from, to, accountId, sort = "amount", limit } = c.req.valid("query");
 
     if (!auth?.userId) {
       return c.json({ error: "Unauthorized" }, 401);
@@ -108,6 +110,7 @@ const app = new Hono().get(
                 sql`SUM(ABS(CAST(${transactions.amount} AS DECIMAL)))`.mapWith(
                   (value) => parseAmountFromDB(value?.toString() || "0")
                 ),
+              count: sql`COUNT(${transactions.id})`,
             })
             .from(transactions)
             .innerJoin(accounts, eq(transactions.accountId, accounts.id))
@@ -123,7 +126,9 @@ const app = new Hono().get(
             )
             .groupBy(categories.name)
             .orderBy(
-              desc(sql`SUM(ABS(CAST(${transactions.amount} AS DECIMAL)))`)
+              sort === "count"
+                ? desc(sql`COUNT(${transactions.id})`)
+                : desc(sql`SUM(ABS(CAST(${transactions.amount} AS DECIMAL)))`)
             )
             .limit(10),
 
@@ -172,16 +177,24 @@ const app = new Hono().get(
       );
 
       // Process categories
-      const topCategories = categoryData.slice(0, 3);
-      const otherCategories = categoryData.slice(3);
-      const otherSum = otherCategories.reduce(
-        (sum, current) => sum + current.value,
-        0
+      const maxCategories = limit && limit > 0 ? limit : 3;
+      const topCategories = categoryData.slice(0, maxCategories);
+      const otherCategories = categoryData.slice(maxCategories);
+      const otherAggregates = otherCategories.reduce(
+        (acc, current) => ({
+          value: acc.value + current.value,
+          count: acc.count + current.count,
+        }),
+        { value: 0, count: 0 }
       );
 
-      const finalCategories = topCategories;
+      const finalCategories = [...topCategories];
       if (otherCategories.length > 0) {
-        finalCategories.push({ name: "Other", value: otherSum });
+        finalCategories.push({
+          name: "Other",
+          value: otherAggregates.value,
+          count: otherAggregates.count,
+        });
       }
 
       const days = fillMissingDays(activeDaysData, startDate, endDate);
