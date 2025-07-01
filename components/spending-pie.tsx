@@ -31,14 +31,21 @@ type Props = {
     name: string;
     value: number;
   }[];
+  topN?: number;
+  onTopNChange?: (n: number) => void;
 };
 
-export const SpendingPie = ({ data = [] }: Props) => {
+export const SpendingPie = ({ data = [], topN = 5, onTopNChange }: Props) => {
   const [chartType, setChartType] = useState("pie");
   const containerRef = useRef<HTMLDivElement>(null);
 
   const onTypeChange = (type: string) => {
     setChartType(type);
+  };
+
+  const handleTopNChange = (value: string) => {
+    const n = parseInt(value, 10);
+    if (onTopNChange) onTopNChange(n);
   };
 
   const exportAsPng = async () => {
@@ -73,14 +80,13 @@ export const SpendingPie = ({ data = [] }: Props) => {
 
   return (
     <Card ref={containerRef} className="border-none drop-shadow-sm">
-      <CardHeader className="flex space-y-2 lg:space-y-0 lg:flex-row lg:items-center justify-between">
-        <CardTitle className="text-xl line-clamp-1">Categories</CardTitle>
-        <div className="flex items-center gap-2">
+      <CardHeader className="pb-0">
+        <CardTitle className="text-xl line-clamp-1 mb-2">Categories</CardTitle>
+        <div className="flex flex-row gap-2 justify-start">
           <Select defaultValue={chartType} onValueChange={onTypeChange}>
             <SelectTrigger className="lg:w-auto h-9 rounded-md px-3">
               <SelectValue placeholder="Chart type" />
             </SelectTrigger>
-
             <SelectContent>
               <SelectItem value="pie">
                 <div className="flex items-center">
@@ -103,6 +109,20 @@ export const SpendingPie = ({ data = [] }: Props) => {
             </SelectContent>
           </Select>
 
+          {/* Top N select */}
+          <Select defaultValue={String(topN)} onValueChange={handleTopNChange}>
+            <SelectTrigger className="lg:w-auto h-9 rounded-md px-3">
+              <SelectValue placeholder="Top N" />
+            </SelectTrigger>
+            <SelectContent>
+              {[3, 5].map((n) => (
+                <SelectItem key={n} value={String(n)}>
+                  Top {n}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
@@ -120,8 +140,7 @@ export const SpendingPie = ({ data = [] }: Props) => {
           </DropdownMenu>
         </div>
       </CardHeader>
-
-      <CardContent>
+      <CardContent className="pt-6">
         {data.length === 0 ? (
           <div className="flex flex-col gap-y-4 items-center justify-center h-[350px] w-full">
             <FileSearch className="size-6 text-muted-foreground" />

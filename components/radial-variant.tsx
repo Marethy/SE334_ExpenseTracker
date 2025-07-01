@@ -32,11 +32,7 @@ export const RadialVariant = ({ data }: Props) => {
         }))}
       >
         <RadialBar
-          label={{
-            position: 'insideStart',
-            fill: '#fff',
-            fontSize: '12px',
-          }}
+          label={false}
           background
           dataKey="value"
         />

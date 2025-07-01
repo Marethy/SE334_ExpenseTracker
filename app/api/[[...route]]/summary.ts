@@ -177,9 +177,14 @@ const app = new Hono().get(
       );
 
       // Process categories
-      const maxCategories = limit && limit > 0 ? limit : 3;
-      const topCategories = categoryData.slice(0, maxCategories);
-      const otherCategories = categoryData.slice(maxCategories);
+      // Sắp xếp theo value giảm dần, nếu bằng nhau thì theo name tăng dần
+      const sortedCategories = [...categoryData].sort((a, b) => {
+        if (b.value !== a.value) return b.value - a.value;
+        return a.name.localeCompare(b.name);
+      });
+      const maxCategories = limit && limit > 0 ? limit : 5;
+      const topCategories = sortedCategories.slice(0, maxCategories);
+      const otherCategories = sortedCategories.slice(maxCategories);
       const otherAggregates = otherCategories.reduce(
         (acc, current) => ({
           value: acc.value + current.value,

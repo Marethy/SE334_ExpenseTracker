@@ -16,9 +16,10 @@ type Props = {
     income: number;
     expenses: number;
   }[];
+  animationEnabled?: boolean;
 };
 
-export const LineVariant = ({ data }: Props) => {
+export const LineVariant = ({ data, animationEnabled = true }: Props) => {
   return (
     <ResponsiveContainer width="100%" height={350}>
       <LineChart data={data}>
@@ -38,6 +39,9 @@ export const LineVariant = ({ data }: Props) => {
           stroke="#3b82f6"
           strokeWidth={2}
           className="drop-shadow-sm"
+          isAnimationActive={animationEnabled}
+          animationDuration={500}
+          animationEasing="ease-in-out"
         />
         <Line
           dot={false}
@@ -45,6 +49,9 @@ export const LineVariant = ({ data }: Props) => {
           stroke="#f43f5e"
           strokeWidth={2}
           className="drop-shadow-sm"
+          isAnimationActive={animationEnabled}
+          animationDuration={500}
+          animationEasing="ease-in-out"
         />
       </LineChart>
     </ResponsiveContainer>

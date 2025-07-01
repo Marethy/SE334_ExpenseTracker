@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2, Crown } from "lucide-react";
+import React from "react";
 
 import { useGetSubscription } from "@/features/subscriptions/api/use-get-subscription";
 import { SubscriptionCheckout } from "@/features/subscriptions/components/subscription-checkout";
@@ -12,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export const SettingsCard = () => {
   const { data: subscription, isLoading: isLoadingSubscription } =
@@ -20,6 +22,18 @@ export const SettingsCard = () => {
 
   const isPremium =
     subscription?.plan === "premium" && subscription?.status === "active";
+
+  const [animationEnabled, setAnimationEnabled] = React.useState(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('animationEnabled');
+      return stored === null ? true : stored === 'true';
+    }
+    return true;
+  });
+
+  React.useEffect(() => {
+    localStorage.setItem('animationEnabled', String(animationEnabled));
+  }, [animationEnabled]);
 
   if (isLoadingSubscription) {
     return (
@@ -132,6 +146,23 @@ export const SettingsCard = () => {
                 </ul>
               )}
             </div>
+          </div>
+        </div>
+
+        <Separator />
+        <div className="flex flex-col gap-y-2 lg:flex-row items-center py-4">
+          <p className="text-sm font-medium w-full lg:w-[16.5rem]">
+            Chart Animations
+          </p>
+          <div className="w-full flex items-center gap-3">
+            <Checkbox
+              checked={animationEnabled}
+              onCheckedChange={v => setAnimationEnabled(!!v)}
+              id="chart-animations-toggle"
+            />
+            <label htmlFor="chart-animations-toggle" className="text-sm select-none cursor-pointer">
+              Enable chart animations
+            </label>
           </div>
         </div>
       </CardContent>

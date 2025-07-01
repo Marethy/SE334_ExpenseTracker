@@ -16,9 +16,10 @@ type Props = {
     income: number;
     expenses: number;
   }[];
+  animationEnabled?: boolean;
 };
 
-export const BarVariant = ({ data }: Props) => {
+export const BarVariant = ({ data, animationEnabled = true }: Props) => {
   return (
     <ResponsiveContainer width="100%" height={350}>
       <BarChart data={data}>
@@ -32,8 +33,8 @@ export const BarVariant = ({ data }: Props) => {
           tickMargin={16}
         />
         <Tooltip content={<CustomTooltip />} />
-        <Bar dataKey="income" fill="#3b82f6" className="drop-shadow-sm" />
-        <Bar dataKey="expenses" fill="#f43f5e" className="drop-shadow-sm" />
+        <Bar dataKey="income" fill="#3b82f6" className="drop-shadow-sm" isAnimationActive={animationEnabled} animationDuration={500} animationEasing="ease-in-out" />
+        <Bar dataKey="expenses" fill="#f43f5e" className="drop-shadow-sm" isAnimationActive={animationEnabled} animationDuration={500} animationEasing="ease-in-out" />
       </BarChart>
     </ResponsiveContainer>
   );

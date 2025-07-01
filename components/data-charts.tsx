@@ -4,9 +4,11 @@ import { Chart, ChartLoading } from '@/components/chart';
 import { SpendingPie, SpendingPieLoading } from '@/components/spending-pie';
 
 import { useGetSummary } from '@/features/summary/api/use-get-summary';
+import { useState } from 'react';
 
 export const DataCharts = () => {
-  const { data, isLoading } = useGetSummary();
+  const [topN, setTopN] = useState(5);
+  const { data, isLoading } = useGetSummary({ limit: topN });
 
   if (isLoading) {
     return (
@@ -27,7 +29,7 @@ export const DataCharts = () => {
         <Chart data={data?.days} />
       </div>
       <div className="col-span-1 lg:col-span-3 xl:col-span-2">
-        <SpendingPie data={data?.categories} />
+        <SpendingPie data={data?.categories} topN={topN} onTopNChange={setTopN} />
       </div>
     </div>
   );

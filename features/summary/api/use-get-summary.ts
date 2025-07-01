@@ -4,13 +4,13 @@ import { useSearchParams } from 'next/navigation';
 import { client } from '@/lib/hono';
 import { convertAmountFromMilliUnits } from '@/lib/utils';
 
-export const useGetSummary = () => {
+export const useGetSummary = (options?: { limit?: number }) => {
   const params = useSearchParams();
   const from = params.get('from') || '';
   const to = params.get('to') || '';
   const accountId = params.get('accountId') || '';
   const sort = params.get('sort') || 'amount';
-  const limit = params.get('limit') || '';
+  const limit = (options?.limit ?? params.get('limit')) || '';
 
   const query = useQuery({
     queryKey: ['summary', { from, to, accountId, sort, limit }],
