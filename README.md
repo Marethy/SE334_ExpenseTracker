@@ -1,123 +1,73 @@
-# Personal Finance Tracker
+# ExpenseTracker: Next-Gen Personal Finance Platform
 
-A full-stack personal finance management application built with React (frontend) and Node.js (backend). It allows users to track income and expenses, view transaction history, and visualize financial data with charts.
+![Architecture Diagram](public/architecture-diagram.png)
 
-## Table of Contents
-1. [Features](#features)
-2. [Tech Stack](#tech-stack)
-3. [Project Structure](#project-structure)
-4. [Prerequisites](#prerequisites)
-5. [Backend Setup](#backend-setup)
-6. [Frontend Setup](#frontend-setup)
-7. [Environment Variables](#environment-variables)
-8. [Usage](#usage)
-9. [Conventions](#conventions)
-10. [Scripts](#scripts)
-11. [API Endpoints](#api-endpoints)
-12. [License](#license)
+## Overview
+ExpenseTracker is a state-of-the-art, cloud-native personal finance management platform architected with a robust **microservices** approach. Leveraging the latest advancements in AI, data engineering, and scalable infrastructure, it empowers users to manage, analyze, and optimize their finances with intelligence and security.
 
-## Features
-- Track income and expenses
-- View transaction history
-- Visualize income vs. expenses with interactive charts
-- Export charts as PNG or PDF
-- Add, edit, and delete transactions
-- Unit tests for both backend and frontend components
+## Key Features
+- **Microservices Architecture**: Each core domain (accounts, transactions, categories, AI analysis, user management) is an independent service for maximum scalability and maintainability.
+- **AI-Powered Insights**: Real-time financial analysis, anomaly detection, and personalized recommendations using advanced machine learning models (NLP, time-series forecasting, LLMs).
+- **Conversational AI**: Integrated AI chat assistant for financial Q&A, powered by OpenAI GPT and custom-trained models.
+- **Automated Data Import**: Smart import and categorization of bank transactions using AI and OCR.
+- **Interactive Data Visualization**: Dynamic charts and dashboards with drill-down analytics.
+- **Cloud-Native & DevOps**: Containerized with Docker, orchestrated by Kubernetes, CI/CD pipelines for rapid delivery.
+- **Security & Compliance**: End-to-end encryption, OAuth2 authentication, GDPR-ready data handling.
 
 ## Tech Stack
-- **Frontend**: React, Axios, Chart.js (react-chartjs-2), Styled-Components, React Testing Library
-- **Backend**: Node.js, Express, MongoDB, Mongoose, Jest
-- **Linting & Formatting**: ESLint, Prettier
+- **Frontend**: Next.js, React, TailwindCSS, Chart.js, TypeScript
+- **Backend**: Node.js, Express, Python (AI microservices), FastAPI
+- **AI/ML**: PyTorch, TensorFlow, HuggingFace Transformers, OpenAI API, ChromaDB (vector DB), LangChain
+- **Data**: PostgreSQL, MongoDB, Redis, Apache Kafka (event streaming)
+- **Cloud & DevOps**: Docker, Kubernetes, GitHub Actions, AWS/GCP/Azure ready
+- **Observability**: Prometheus, Grafana, ELK Stack
+
+## Microservices Architecture
+```
+[ User ]
+   |
+[ API Gateway ]
+   |
++-------------------+-------------------+-------------------+
+|                   |                   |                   |
+[ Accounts Service ] [ Transactions ]   [ Categories ]   [ AI Service ]
+|                   |                   |                   |
+[ PostgreSQL ]      [ MongoDB ]         [ Redis ]          [ ChromaDB, OpenAI ]
+```
+
+See the diagram above for a high-level overview.
+
+## AI & Data Science Innovations
+- **Custom LLMs**: Fine-tuned language models for financial Q&A and document understanding.
+- **Embeddings & Vector Search**: Semantic search over user data using ChromaDB and HuggingFace embeddings.
+- **Automated Categorization**: ML models for transaction classification and fraud detection.
+- **Time-Series Forecasting**: Predictive analytics for budgeting and cash flow.
+
+## Getting Started
+1. **Clone the repository**
+2. **Install dependencies** for each service (see respective folders)
+3. **Run with Docker Compose**:
+   ```bash
+   docker-compose up --build
+   ```
+4. **Access the app** at `http://localhost:3000`
 
 ## Project Structure
 ```
-.
-├─ backend/
-│   ├─ app.js
-│   ├─ models/
-│   │   └─ Transaction.js
-│   ├─ routes/
-│   │   └─ transactions.js
-│   ├─ controllers/
-│   └─ services/
-└─ frontend/
-    ├─ src/
-    │   ├─ components/
-    │   │   ├─ BalanceCard.jsx
-    │   │   ├─ TransactionForm.jsx
-    │   │   ├─ TransactionList.jsx
-    │   │   └─ FinancialChart.jsx
-    │   ├─ services/
-    │   │   └─ transactionService.js
-    │   ├─ App.js
-    │   └─ index.js
+SE334_ExpenseTracker/
+  ├─ ai-service/           # AI/ML microservices (Python, FastAPI)
+  ├─ app/                  # Next.js frontend & API gateway
+  ├─ db/                   # Database schemas & migrations
+  ├─ features/             # Domain-driven feature modules
+  ├─ scripts/              # DevOps & automation scripts
+  └─ ...
 ```
 
-## Prerequisites
-- Node.js v14+ and npm
-- MongoDB (local or Atlas)
-
-## Backend Setup
-1. Navigate to `backend/`
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Create a `.env` file with the following:
-   ```
-   MONGO_URI=mongodb://localhost:27017/finance-tracker
-   PORT=5000
-   ```
-4. Start the server:
-   ```bash
-   npm run start
-   ```
-
-## Frontend Setup
-1. Navigate to `frontend/`
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Create a `.env` file with the following (if needed):
-   ```
-   REACT_APP_API_URL=http://localhost:5000/api
-   ```
-4. Start the development server:
-   ```bash
-   npm start
-   ```
-
-## Environment Variables
-- **MONGO_URI**: MongoDB connection string
-- **PORT**: Backend server port (default: 5000)
-- **REACT_APP_API_URL**: Base URL for API calls from frontend
-
-## Usage
-1. Launch backend and frontend as described above.
-2. Open `http://localhost:3000` in your browser.
-3. Add income or expense transactions, view history, and analyze charts.
-4. Use the export button on each chart to download it as PNG or PDF.
-
-## Conventions
-See [`CONVENTIONS.md`](CONVENTIONS.md) for coding style, branch naming, and commit message guidelines.
-
-## Scripts
-- **Backend**:
-  - `npm run start` – start server
-  - `npm run dev` – start with nodemon
-  - `npm test` – run Jest tests
-- **Frontend**:
-  - `npm start` – start React development server
-  - `npm run lint` – run ESLint
-  - `npm run format` – run Prettier
-  - `npm test` – run React Testing Library
-
-## API Endpoints
-- `GET /api/transactions` – fetch all transactions
-- `POST /api/transactions` – create a new transaction
-- `PUT /api/transactions/:id` – update an existing transaction
-- `DELETE /api/transactions/:id` – delete a transaction
+## Contributing
+We welcome contributions in AI, backend, frontend, and DevOps. See [`CONVENTIONS.md`](CONVENTIONS.md) for guidelines.
 
 ## License
-This project is licensed under the MIT License.
+MIT License. For academic and personal use only.
+
+---
+> *Đồ án phát triển bởi nhóm SE334 – 2024. Mọi thông tin chỉ mang tính chất minh họa.*
